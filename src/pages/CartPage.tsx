@@ -1,0 +1,203 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+interface CartItem {
+  id: number;
+  productId: number;
+  productTitle: string;
+  productPrice: number;
+  quantity: number;
+}
+
+const CartPage = () => {
+  const navigate = useNavigate();
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchCart = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/carts/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('장바구니 조회 실패');
+      }
+
+      const data = await response.json();
+      setCartItems(data.items || []);
+    } catch (error) {
+      console.error('장바구니 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  const updateQuantity = async (itemId: number, newQuantity: number) => {
+    if (newQuantity < 1) return;
+
+    const token = localStorage.getItem('accessToken');
+    try {
+      await fetch(`http://localhost:8080/api/carts/me/items/${itemId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ quantity: newQuantity }),
+      });
+
+      setCartItems(cartItems.map(item =>
+        item.id === itemId ? { ...item, quantity: newQuantity } : item
+      ));
+    } catch (error) {
+      console.error('수량 변경 실패:', error);
+    }
+  };
+
+  const removeItem = async (itemId: number) => {
+    const token = localStorage.getItem('accessToken');
+    try {
+      await fetch(`http://localhost:8080/api/carts/me/items/${itemId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      setCartItems(cartItems.filter(item => item.id !== itemId));
+    } catch (error) {
+      console.error('삭제 실패:', error);
+    }
+  };
+
+  const formatPrice = (price: number) => {
+    return price.toLocaleString('ko-KR') + '원';
+  };
+
+  const totalPrice = cartItems.reduce(
+    (sum, item) => sum + item.productPrice * item.quantity,
+    0
+  );
+
+  const handleOrder = () => {
+    if (cartItems.length === 0) {
+      alert('장바구니가 비어있습니다.');
+      return;
+    }
+    navigate('/order');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span>로딩 중...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <a href="/" className="text-2xl font-bold text-blue-600">사고팔고</a>
+          <div className="space-x-4">
+            <a href="/" className="text-gray-600 hover:text-blue-600">홈</a>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">장바구니</h1>
+
+        {cartItems.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <p className="text-gray-500 mb-4">장바구니가 비어있습니다.</p>
+            <a href="/" className="text-blue-500 hover:underline">쇼핑하러 가기</a>
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+              {cartItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className={`p-4 flex items-center gap-4 ${
+                    index !== cartItems.length - 1 ? 'border-b' : ''
+                  }`}
+                >
+                  <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
+                    <span className="text-gray-400 text-xs">이미지</span>
+                  </div>
+
+                  <div className="flex-1">
+                    <a
+                      href={`/products/${item.productId}`}
+                      className="font-semibold hover:text-blue-600"
+                    >
+                      {item.productTitle}
+                    </a>
+                    <p className="text-blue-600 font-bold">{formatPrice(item.productPrice)}</p>
+                  </div>
+
+                  <div className="flex items-center border rounded-md">
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      className="px-3 py-1 hover:bg-gray-100"
+                    >
+                      -
+                    </button>
+                    <span className="px-3 py-1 border-x">{item.quantity}</span>
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="px-3 py-1 hover:bg-gray-100"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <p className="w-28 text-right font-bold">
+                    {formatPrice(item.productPrice * item.quantity)}
+                  </p>
+
+                  <button
+                    onClick={() => removeItem(item.id)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-lg">총 결제금액</span>
+                <span className="text-2xl font-bold text-blue-600">{formatPrice(totalPrice)}</span>
+              </div>
+              <button
+                onClick={handleOrder}
+                className="w-full py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-lg font-semibold"
+              >
+                주문하기
+              </button>
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default CartPage;
