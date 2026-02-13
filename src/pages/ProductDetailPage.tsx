@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
 
 interface Product {
   id: number;
@@ -90,34 +91,28 @@ const ProductDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span>로딩 중...</span>
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <span>로딩 중...</span>
+        </div>
+      </Layout>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-red-500 mb-4">{error || '상품을 찾을 수 없습니다.'}</p>
-        <a href="/" className="text-blue-500 hover:underline">홈으로 돌아가기</a>
-      </div>
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <p className="text-red-500 mb-4">{error || '상품을 찾을 수 없습니다.'}</p>
+          <a href="/" className="text-blue-500 hover:underline">홈으로 돌아가기</a>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <a href="/" className="text-2xl font-bold text-blue-600">사고팔고</a>
-          <div className="space-x-4">
-            <a href="/login" className="text-gray-600 hover:text-blue-600">로그인</a>
-            <a href="/register" className="text-gray-600 hover:text-blue-600">회원가입</a>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
+    <Layout>
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="md:flex">
             <div className="md:w-1/2 h-96 bg-gray-200 flex items-center justify-center">
@@ -189,8 +184,8 @@ const ProductDetailPage = () => {
             <p className="text-gray-700 whitespace-pre-wrap">{product.contents}</p>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 
