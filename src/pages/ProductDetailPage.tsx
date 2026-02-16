@@ -21,6 +21,8 @@ const ProductDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -41,6 +43,11 @@ const ProductDetailPage = () => {
 
         const data = await response.json();
         setProduct(data);
+
+        // 찜 여부 확인
+        if (token) {
+          checkLikeStatus(token);
+        }
       } catch (err) {
         setError('상품을 불러오는데 실패했습니다.');
       } finally {
@@ -50,6 +57,50 @@ const ProductDetailPage = () => {
 
     fetchProduct();
   }, [id]);
+
+  const checkLikeStatus = async (token: string) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/likes/check/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsLiked(data.liked);
+      }
+    } catch (err) {
+      console.error('찜 상태 확인 실패:', err);
+    }
+  };
+
+  const handleToggleLike = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    setLikeLoading(true);
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/likes/${id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setIsLiked(!isLiked);
+      }
+    } catch (err) {
+      console.error('찜 토글 실패:', err);
+    } finally {
+      setLikeLoading(false);
+    }
+  };
 
   const handleAddToCart = async () => {
     const token = localStorage.getItem('accessToken');
@@ -120,17 +171,28 @@ const ProductDetailPage = () => {
             </div>
 
             <div className="md:w-1/2 p-8">
-              <div className="mb-4">
-                <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-                  {product.productCategory}
-                </span>
-                <span className={`ml-2 px-3 py-1 rounded-full text-sm ${
-                  product.productStatus === 'ON_SALE'
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {product.productStatus === 'ON_SALE' ? '판매중' : '판매완료'}
-                </span>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
+                    {product.productCategory}
+                  </span>
+                  <span className={`ml-2 px-3 py-1 rounded-full text-sm ${
+                    product.productStatus === 'ON_SALE'
+                      ? 'bg-green-100 text-green-600'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {product.productStatus === 'ON_SALE' ? '판매중' : '판매완료'}
+                  </span>
+                </div>
+                <button
+                  onClick={handleToggleLike}
+                  disabled={likeLoading}
+                  className={`text-2xl transition-colors ${
+                    isLiked ? 'text-red-500' : 'text-gray-300 hover:text-red-300'
+                  }`}
+                >
+                  {isLiked ? '♥' : '♡'}
+                </button>
               </div>
 
               <h1 className="text-2xl font-bold mb-4">{product.title}</h1>
