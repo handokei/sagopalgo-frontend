@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Layout from '../components/Layout';
 
 interface Product {
   id: number;
@@ -80,18 +81,8 @@ const ProductListPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-blue-600">사고팔고</h1>
-          <div className="space-x-4">
-            <a href="/login" className="text-gray-600 hover:text-blue-600">로그인</a>
-            <a href="/register" className="text-gray-600 hover:text-blue-600">회원가입</a>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
+    <Layout>
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <form onSubmit={handleSearch} className="mb-6 flex gap-4 flex-wrap">
           <input
             type="text"
@@ -177,8 +168,8 @@ const ProductListPage = () => {
             </button>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

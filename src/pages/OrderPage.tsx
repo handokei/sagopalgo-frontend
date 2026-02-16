@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
 
 interface CartItem {
   id: number;
@@ -100,24 +101,17 @@ const OrderPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span>로딩 중...</span>
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <span>로딩 중...</span>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <a href="/" className="text-2xl font-bold text-blue-600">사고팔고</a>
-          <div className="space-x-4">
-            <a href="/cart" className="text-gray-600 hover:text-blue-600">장바구니</a>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <Layout>
+      <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">주문하기</h1>
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
@@ -178,8 +172,8 @@ const OrderPage = () => {
             {submitting ? '처리 중...' : '결제하기'}
           </button>
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 
