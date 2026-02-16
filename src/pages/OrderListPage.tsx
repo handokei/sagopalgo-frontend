@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
 
 interface Order {
   id: number;
@@ -80,25 +81,18 @@ const OrderListPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span>로딩 중...</span>
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <span>로딩 중...</span>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <a href="/" className="text-2xl font-bold text-blue-600">사고팔고</a>
-          <div className="space-x-4">
-            <a href="/" className="text-gray-600 hover:text-blue-600">홈</a>
-            <a href="/cart" className="text-gray-600 hover:text-blue-600">장바구니</a>
-          </div>
-        </div>
-      </header>
+    <Layout>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">주문 내역</h1>
 
         {orders.length === 0 ? (
@@ -135,8 +129,8 @@ const OrderListPage = () => {
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

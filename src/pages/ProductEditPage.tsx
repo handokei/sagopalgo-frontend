@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
 
 const ProductEditPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -109,22 +110,17 @@ const ProductEditPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span>로딩 중...</span>
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <span>로딩 중...</span>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <a href="/" className="text-2xl font-bold text-blue-600">사고팔고</a>
-          <a href="/my/products" className="text-gray-600 hover:text-blue-600">내 상품</a>
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-4 py-8">
+    <Layout>
+      <div className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">상품 수정</h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
@@ -221,8 +217,8 @@ const ProductEditPage = () => {
             </button>
           </div>
         </form>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

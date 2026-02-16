@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
 
 const ProductCreatePage = () => {
   const navigate = useNavigate();
@@ -63,15 +64,8 @@ const ProductCreatePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <a href="/" className="text-2xl font-bold text-blue-600">사고팔고</a>
-          <a href="/my/products" className="text-gray-600 hover:text-blue-600">내 상품</a>
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-4 py-8">
+    <Layout>
+      <div className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">상품 등록</h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
@@ -157,8 +151,8 @@ const ProductCreatePage = () => {
             </button>
           </div>
         </form>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 
