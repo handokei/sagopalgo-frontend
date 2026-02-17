@@ -1,27 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+
+interface ProductImage {
+  id: number;
+  imageUrl: string;
+  originalFileName: string;
+  sortOrder: number;
+  main: boolean;
+}
 
 const ProductEditPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
   const [contents, setContents] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
+  const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [newPreviews, setNewPreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const categories = [
-    { value: 'ELECTRONICS', label: '전자기기' },
-    { value: 'FASHION', label: '패션' },
-    { value: 'HOME', label: '홈/리빙' },
-    { value: 'SPORTS', label: '스포츠' },
-    { value: 'BOOKS', label: '도서' },
-    { value: 'ETC', label: '기타' },
+    { value: 'T_SHIRT', label: '티셔츠' },
+    { value: 'HOODIE', label: '후드' },
+    { value: 'OUTER', label: '아우터' },
+    { value: 'PANTS', label: '바지' },
+    { value: 'SHOES', label: '신발' },
   ];
 
   const statuses = [
@@ -55,6 +66,13 @@ const ProductEditPage = () => {
         setStock(data.stock.toString());
         setCategory(data.productCategory);
         setStatus(data.productStatus);
+
+        // 이미지 조회
+        const imagesResponse = await fetch(`http://localhost:8080/api/products/${id}/images`);
+        if (imagesResponse.ok) {
+          const imagesData = await imagesResponse.json();
+          setExistingImages(imagesData);
+        }
       } catch (error) {
         console.error('상품 조회 실패:', error);
         navigate('/my/products');
@@ -65,6 +83,47 @@ const ProductEditPage = () => {
 
     fetchProduct();
   }, [id, navigate]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const fileArray = Array.from(files);
+    setNewImages((prev) => [...prev, ...fileArray]);
+
+    fileArray.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewPreviews((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
+    setNewPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const deleteExistingImage = async (imageId: number) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/products/${id}/images/${imageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+      }
+    } catch (err) {
+      console.error('이미지 삭제 실패:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +138,7 @@ const ProductEditPage = () => {
     setSubmitting(true);
 
     try {
+      // 1. 상품 정보 수정
       const response = await fetch(`http://localhost:8080/api/products/${id}`, {
         method: 'PATCH',
         headers: {
@@ -97,6 +157,22 @@ const ProductEditPage = () => {
 
       if (!response.ok) {
         throw new Error('수정 실패');
+      }
+
+      // 2. 새 이미지 업로드
+      if (newImages.length > 0) {
+        const formData = new FormData();
+        newImages.forEach((file) => {
+          formData.append('files', file);
+        });
+
+        await fetch(`http://localhost:8080/api/products/${id}/images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
       }
 
       alert('상품이 수정되었습니다.');
@@ -124,6 +200,70 @@ const ProductEditPage = () => {
         <h1 className="text-2xl font-bold mb-6">상품 수정</h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
+          {/* 이미지 관리 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">상품 이미지</label>
+            <div className="flex flex-wrap gap-3 mb-3">
+              {/* 기존 이미지 */}
+              {existingImages.map((image, index) => (
+                <div key={image.id} className="relative w-24 h-24">
+                  <img
+                    src={`http://localhost:8080${image.imageUrl}`}
+                    alt={`이미지 ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => deleteExistingImage(image.id)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-sm hover:bg-red-600"
+                  >
+                    X
+                  </button>
+                  {image.main && (
+                    <span className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                      대표
+                    </span>
+                  )}
+                </div>
+              ))}
+              {/* 새 이미지 미리보기 */}
+              {newPreviews.map((preview, index) => (
+                <div key={`new-${index}`} className="relative w-24 h-24">
+                  <img
+                    src={preview}
+                    alt={`새 이미지 ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg border border-green-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeNewImage(index)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-sm hover:bg-red-600"
+                  >
+                    X
+                  </button>
+                  <span className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1 rounded">
+                    새로
+                  </span>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 hover:border-blue-500 hover:text-blue-500"
+              >
+                <span className="text-3xl">+</span>
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">상품명</label>
             <input

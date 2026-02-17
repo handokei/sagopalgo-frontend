@@ -1,25 +1,48 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 
 const ProductCreatePage = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
   const [contents, setContents] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('1');
-  const [category, setCategory] = useState('ETC');
+  const [category, setCategory] = useState('T_SHIRT');
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const categories = [
-    { value: 'ELECTRONICS', label: '전자기기' },
-    { value: 'FASHION', label: '패션' },
-    { value: 'HOME', label: '홈/리빙' },
-    { value: 'SPORTS', label: '스포츠' },
-    { value: 'BOOKS', label: '도서' },
-    { value: 'ETC', label: '기타' },
+    { value: 'T_SHIRT', label: '티셔츠' },
+    { value: 'HOODIE', label: '후드' },
+    { value: 'OUTER', label: '아우터' },
+    { value: 'PANTS', label: '바지' },
+    { value: 'SHOES', label: '신발' },
   ];
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles = Array.from(files);
+    setImages((prev) => [...prev, ...newFiles]);
+
+    newFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +57,7 @@ const ProductCreatePage = () => {
     setSubmitting(true);
 
     try {
+      // 1. 상품 등록
       const response = await fetch('http://localhost:8080/api/products/create', {
         method: 'POST',
         headers: {
@@ -54,6 +78,25 @@ const ProductCreatePage = () => {
         throw new Error('상품 등록 실패');
       }
 
+      const productData = await response.json();
+      const productId = productData.id;
+
+      // 2. 이미지 업로드 (이미지가 있는 경우)
+      if (images.length > 0) {
+        const formData = new FormData();
+        images.forEach((file) => {
+          formData.append('files', file);
+        });
+
+        await fetch(`http://localhost:8080/api/products/${productId}/images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+      }
+
       alert('상품이 등록되었습니다.');
       navigate('/my/products');
     } catch (err) {
@@ -69,6 +112,50 @@ const ProductCreatePage = () => {
         <h1 className="text-2xl font-bold mb-6">상품 등록</h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-6">
+          {/* 이미지 업로드 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">상품 이미지</label>
+            <div className="flex flex-wrap gap-3 mb-3">
+              {previews.map((preview, index) => (
+                <div key={index} className="relative w-24 h-24">
+                  <img
+                    src={preview}
+                    alt={`미리보기 ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-sm hover:bg-red-600"
+                  >
+                    X
+                  </button>
+                  {index === 0 && (
+                    <span className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                      대표
+                    </span>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 hover:border-blue-500 hover:text-blue-500"
+              >
+                <span className="text-3xl">+</span>
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
+              className="hidden"
+            />
+            <p className="text-sm text-gray-500">첫 번째 이미지가 대표 이미지로 설정됩니다.</p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">상품명</label>
             <input
