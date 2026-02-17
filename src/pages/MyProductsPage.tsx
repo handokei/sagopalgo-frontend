@@ -26,7 +26,7 @@ const MyProductsPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:8080/api/products?seller=me', {
+        const response = await fetch('http://localhost:8080/api/products/me', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
