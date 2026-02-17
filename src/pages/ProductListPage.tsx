@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 
+interface ProductImage {
+  id: number;
+  imageUrl: string;
+  main: boolean;
+}
+
 interface Product {
   id: number;
   title: string;
@@ -8,6 +14,7 @@ interface Product {
   productStatus: string;
   productCategory: string;
   sellerNickname: string;
+  mainImage?: string;
 }
 
 interface PageResponse {
@@ -28,12 +35,11 @@ const ProductListPage = () => {
 
   const categories = [
     { value: '', label: '전체' },
-    { value: 'ELECTRONICS', label: '전자기기' },
-    { value: 'FASHION', label: '패션' },
-    { value: 'HOME', label: '홈/리빙' },
-    { value: 'SPORTS', label: '스포츠' },
-    { value: 'BOOKS', label: '도서' },
-    { value: 'ETC', label: '기타' },
+    { value: 'T_SHIRT', label: '티셔츠' },
+    { value: 'HOODIE', label: '후드' },
+    { value: 'OUTER', label: '아우터' },
+    { value: 'PANTS', label: '바지' },
+    { value: 'SHOES', label: '신발' },
   ];
 
   const sortOptions = [
@@ -43,6 +49,20 @@ const ProductListPage = () => {
     { value: 'price_desc', label: '가격 높은순' },
     { value: 'popular', label: '인기순' },
   ];
+
+  const fetchProductImage = async (productId: number): Promise<string | undefined> => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/products/${productId}/images`);
+      if (response.ok) {
+        const images: ProductImage[] = await response.json();
+        const mainImage = images.find(img => img.main) || images[0];
+        return mainImage ? `http://localhost:8080${mainImage.imageUrl}` : undefined;
+      }
+    } catch (error) {
+      console.error('이미지 조회 실패:', error);
+    }
+    return undefined;
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -57,7 +77,15 @@ const ProductListPage = () => {
       const response = await fetch(`http://localhost:8080/api/products?${params}`);
       const data: PageResponse = await response.json();
 
-      setProducts(data.content);
+      // 각 상품의 대표 이미지 가져오기
+      const productsWithImages = await Promise.all(
+        data.content.map(async (product) => {
+          const mainImage = await fetchProductImage(product.id);
+          return { ...product, mainImage };
+        })
+      );
+
+      setProducts(productsWithImages);
       setTotalPages(data.totalPages);
     } catch (error) {
       console.error('상품 조회 실패:', error);
@@ -78,6 +106,11 @@ const ProductListPage = () => {
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('ko-KR') + '원';
+  };
+
+  const getCategoryLabel = (categoryValue: string) => {
+    const cat = categories.find(c => c.value === categoryValue);
+    return cat ? cat.label : categoryValue;
   };
 
   return (
@@ -130,14 +163,27 @@ const ProductListPage = () => {
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <div className="h-48 bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-400">이미지</span>
+                  {product.mainImage ? (
+                    <img
+                      src={product.mainImage}
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-gray-400">이미지 없음</span>
+                  )}
                 </div>
                 <div className="p-4">
+                  <div className="text-xs text-blue-500 mb-1">{getCategoryLabel(product.productCategory)}</div>
                   <h3 className="font-semibold text-lg mb-1 truncate">{product.title}</h3>
                   <p className="text-blue-600 font-bold text-xl mb-2">{formatPrice(product.price)}</p>
                   <div className="flex justify-between text-sm text-gray-500">
                     <span>{product.sellerNickname}</span>
-                    <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      product.productStatus === 'ON_SALE'
+                        ? 'bg-green-100 text-green-600'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}>
                       {product.productStatus === 'ON_SALE' ? '판매중' : '판매완료'}
                     </span>
                   </div>

@@ -14,10 +14,20 @@ interface Product {
   createdAt: string;
 }
 
+interface ProductImage {
+  id: number;
+  imageUrl: string;
+  originalFileName: string;
+  sortOrder: number;
+  main: boolean;
+}
+
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -44,6 +54,13 @@ const ProductDetailPage = () => {
         const data = await response.json();
         setProduct(data);
 
+        // 이미지 조회
+        const imagesResponse = await fetch(`http://localhost:8080/api/products/${id}/images`);
+        if (imagesResponse.ok) {
+          const imagesData = await imagesResponse.json();
+          setImages(imagesData);
+        }
+
         // 찜 여부 확인
         if (token) {
           checkLikeStatus(token);
@@ -60,7 +77,7 @@ const ProductDetailPage = () => {
 
   const checkLikeStatus = async (token: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/likes/check/${id}`, {
+      const response = await fetch(`http://localhost:8080/api/products/${id}/likes/check`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -85,7 +102,7 @@ const ProductDetailPage = () => {
     setLikeLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/likes/${id}`, {
+      const response = await fetch(`http://localhost:8080/api/products/${id}/likes`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -93,7 +110,8 @@ const ProductDetailPage = () => {
       });
 
       if (response.ok) {
-        setIsLiked(!isLiked);
+        const data = await response.json();
+        setIsLiked(data.liked);
       }
     } catch (err) {
       console.error('찜 토글 실패:', err);
@@ -136,8 +154,24 @@ const ProductDetailPage = () => {
     return price.toLocaleString('ko-KR') + '원';
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | number[]) => {
+    if (Array.isArray(dateString)) {
+      // LocalDateTime array format: [year, month, day, hour, minute, second]
+      const [year, month, day] = dateString;
+      return `${year}. ${month}. ${day}.`;
+    }
     return new Date(dateString).toLocaleDateString('ko-KR');
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const categoryMap: { [key: string]: string } = {
+      'T_SHIRT': '티셔츠',
+      'HOODIE': '후드',
+      'OUTER': '아우터',
+      'PANTS': '바지',
+      'SHOES': '신발',
+    };
+    return categoryMap[category] || category;
   };
 
   if (loading) {
@@ -166,15 +200,49 @@ const ProductDetailPage = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="md:flex">
-            <div className="md:w-1/2 h-96 bg-gray-200 flex items-center justify-center">
-              <span className="text-gray-400 text-xl">상품 이미지</span>
+            {/* 이미지 영역 */}
+            <div className="md:w-1/2">
+              {images.length > 0 ? (
+                <div>
+                  <div className="h-96 bg-gray-100">
+                    <img
+                      src={`http://localhost:8080${images[selectedImageIndex].imageUrl}`}
+                      alt={product.title}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  {images.length > 1 && (
+                    <div className="flex gap-2 p-4 overflow-x-auto">
+                      {images.map((image, index) => (
+                        <button
+                          key={image.id}
+                          onClick={() => setSelectedImageIndex(index)}
+                          className={`w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 ${
+                            selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200'
+                          }`}
+                        >
+                          <img
+                            src={`http://localhost:8080${image.imageUrl}`}
+                            alt={`${product.title} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="h-96 bg-gray-200 flex items-center justify-center">
+                  <span className="text-gray-400 text-xl">상품 이미지</span>
+                </div>
+              )}
             </div>
 
             <div className="md:w-1/2 p-8">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-                    {product.productCategory}
+                    {getCategoryLabel(product.productCategory)}
                   </span>
                   <span className={`ml-2 px-3 py-1 rounded-full text-sm ${
                     product.productStatus === 'ON_SALE'
