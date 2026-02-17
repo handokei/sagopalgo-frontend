@@ -2,18 +2,39 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 
+interface ProductImage {
+  id: number;
+  imageUrl: string;
+  main: boolean;
+}
+
 interface LikedProduct {
   id: number;
   productId: number;
   productTitle: string;
   productPrice: number;
   productStatus: string;
+  mainImage?: string;
 }
 
 const LikesPage = () => {
   const navigate = useNavigate();
   const [likes, setLikes] = useState<LikedProduct[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const fetchProductImage = async (productId: number): Promise<string | undefined> => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/products/${productId}/images`);
+      if (response.ok) {
+        const images: ProductImage[] = await response.json();
+        const mainImage = images.find(img => img.main) || images[0];
+        return mainImage ? `http://localhost:8080${mainImage.imageUrl}` : undefined;
+      }
+    } catch (error) {
+      console.error('이미지 조회 실패:', error);
+    }
+    return undefined;
+  };
 
   useEffect(() => {
     const fetchLikes = async () => {
@@ -24,7 +45,7 @@ const LikesPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:8080/api/likes', {
+        const response = await fetch('http://localhost:8080/api/products/me/likes', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -35,7 +56,17 @@ const LikesPage = () => {
         }
 
         const data = await response.json();
-        setLikes(data.content || []);
+        const likesData = data.content || [];
+
+        // 각 상품의 대표 이미지 가져오기
+        const likesWithImages = await Promise.all(
+          likesData.map(async (like: LikedProduct) => {
+            const mainImage = await fetchProductImage(like.productId);
+            return { ...like, mainImage };
+          })
+        );
+
+        setLikes(likesWithImages);
       } catch (error) {
         console.error('찜 목록 조회 실패:', error);
       } finally {
@@ -46,17 +77,17 @@ const LikesPage = () => {
     fetchLikes();
   }, [navigate]);
 
-  const handleUnlike = async (likeId: number) => {
+  const handleUnlike = async (productId: number) => {
     const token = localStorage.getItem('accessToken');
     try {
-      await fetch(`http://localhost:8080/api/likes/${likeId}`, {
-        method: 'DELETE',
+      await fetch(`http://localhost:8080/api/products/${productId}/likes`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      setLikes(likes.filter(like => like.id !== likeId));
+      setLikes(likes.filter(like => like.productId !== productId));
     } catch (error) {
       console.error('찜 해제 실패:', error);
     }
@@ -95,7 +126,15 @@ const LikesPage = () => {
               >
                 <a href={`/products/${like.productId}`}>
                   <div className="h-40 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-400">이미지</span>
+                    {like.mainImage ? (
+                      <img
+                        src={like.mainImage}
+                        alt={like.productTitle}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-400">이미지 없음</span>
+                    )}
                   </div>
                 </a>
                 <div className="p-4">
@@ -117,7 +156,7 @@ const LikesPage = () => {
                       {like.productStatus === 'ON_SALE' ? '판매중' : '판매완료'}
                     </span>
                     <button
-                      onClick={() => handleUnlike(like.id)}
+                      onClick={() => handleUnlike(like.productId)}
                       className="text-red-500 hover:text-red-700"
                     >
                       ♥ 찜 해제
