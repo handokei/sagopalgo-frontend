@@ -18,7 +18,7 @@ const CartPage = () => {
   const fetchCart = async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
-      navigate('/login');
+      setLoading(false);
       return;
     }
 
@@ -41,6 +41,8 @@ const CartPage = () => {
       setLoading(false);
     }
   };
+
+  const isLoggedIn = !!localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchCart();
@@ -116,7 +118,12 @@ const CartPage = () => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">장바구니</h1>
 
-        {cartItems.length === 0 ? (
+        {!isLoggedIn ? (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <p className="text-gray-500 mb-4">로그인하면 장바구니를 이용할 수 있습니다.</p>
+            <a href="/login" className="text-blue-500 hover:underline">로그인하기</a>
+          </div>
+        ) : cartItems.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <p className="text-gray-500 mb-4">장바구니가 비어있습니다.</p>
             <a href="/" className="text-blue-500 hover:underline">쇼핑하러 가기</a>
