@@ -4,9 +4,13 @@ import Layout from '../components/Layout';
 
 interface Order {
   id: number;
+  productTitle: string;
   totalPrice: number;
   orderStatus: string;
-  createdAt: string;
+  recipientName: string;
+  phoneNumber: string;
+  address: string;
+  createAt: string | number[];
 }
 
 const OrderListPage = () => {
@@ -49,7 +53,11 @@ const OrderListPage = () => {
     return price.toLocaleString('ko-KR') + '원';
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | number[]) => {
+    if (Array.isArray(dateString)) {
+      const [year, month, day] = dateString;
+      return `${year}년 ${month}월 ${day}일`;
+    }
     return new Date(dateString).toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: 'long',
@@ -109,15 +117,16 @@ const OrderListPage = () => {
               >
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+                    <p className="text-sm text-gray-500">{formatDate(order.createAt)}</p>
                     <p className="text-sm text-gray-400">주문번호: {order.id}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(order.orderStatus)}`}>
                     {getStatusText(order.orderStatus)}
                   </span>
                 </div>
+                <p className="font-semibold mb-2">{order.productTitle}</p>
                 <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold">{formatPrice(order.totalPrice)}</span>
+                  <span className="text-lg font-bold text-blue-600">{formatPrice(order.totalPrice)}</span>
                   <a
                     href={`/orders/${order.id}`}
                     className="text-blue-500 hover:underline text-sm"
