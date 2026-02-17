@@ -39,12 +39,12 @@ const OrderPage = () => {
         }
 
         const data = await response.json();
-        if (!data.items || data.items.length === 0) {
+        if (!data.content || data.content.length === 0) {
           alert('장바구니가 비어있습니다.');
           navigate('/cart');
           return;
         }
-        setCartItems(data.items);
+        setCartItems(data.content);
       } catch (error) {
         console.error('장바구니 조회 실패:', error);
         navigate('/cart');

@@ -34,7 +34,7 @@ const CartPage = () => {
       }
 
       const data = await response.json();
-      setCartItems(data.items || []);
+      setCartItems(data.content || []);
     } catch (error) {
       console.error('장바구니 조회 실패:', error);
     } finally {
