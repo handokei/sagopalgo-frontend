@@ -2,12 +2,19 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 
+interface ProductImage {
+  id: number;
+  imageUrl: string;
+  main: boolean;
+}
+
 interface CartItem {
   id: number;
   productId: number;
   productTitle: string;
   productPrice: number;
   quantity: number;
+  mainImage?: string;
 }
 
 const OrderPage = () => {
@@ -18,6 +25,20 @@ const OrderPage = () => {
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
+
+  const fetchProductImage = async (productId: number): Promise<string | undefined> => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/products/${productId}/images`);
+      if (response.ok) {
+        const images: ProductImage[] = await response.json();
+        const mainImage = images.find(img => img.main) || images[0];
+        return mainImage ? `http://localhost:8080${mainImage.imageUrl}` : undefined;
+      }
+    } catch (error) {
+      console.error('이미지 조회 실패:', error);
+    }
+    return undefined;
+  };
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -44,7 +65,16 @@ const OrderPage = () => {
           navigate('/cart');
           return;
         }
-        setCartItems(data.content);
+
+        // 각 상품의 이미지 가져오기
+        const itemsWithImages = await Promise.all(
+          data.content.map(async (item: CartItem) => {
+            const mainImage = await fetchProductImage(item.productId);
+            return { ...item, mainImage };
+          })
+        );
+
+        setCartItems(itemsWithImages);
       } catch (error) {
         console.error('장바구니 조회 실패:', error);
         navigate('/cart');
@@ -136,8 +166,12 @@ const OrderPage = () => {
                 index !== cartItems.length - 1 ? 'border-b' : ''
               }`}
             >
-              <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
-                <span className="text-gray-400 text-xs">이미지</span>
+              <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center overflow-hidden">
+                {item.mainImage ? (
+                  <img src={item.mainImage} alt={item.productTitle} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-gray-400 text-xs">이미지</span>
+                )}
               </div>
               <div className="flex-1">
                 <p className="font-semibold">{item.productTitle}</p>

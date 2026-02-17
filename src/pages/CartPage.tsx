@@ -2,21 +2,45 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 
+interface ProductImage {
+  id: number;
+  imageUrl: string;
+  main: boolean;
+}
+
 interface CartItem {
   id: number;
   productId: number;
   productTitle: string;
   productPrice: number;
   quantity: number;
+  mainImage?: string;
 }
 
 const CartPage = () => {
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const fetchProductImage = async (productId: number): Promise<string | undefined> => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/products/${productId}/images`);
+      if (response.ok) {
+        const images: ProductImage[] = await response.json();
+        const mainImage = images.find(img => img.main) || images[0];
+        return mainImage ? `http://localhost:8080${mainImage.imageUrl}` : undefined;
+      }
+    } catch (error) {
+      console.error('이미지 조회 실패:', error);
+    }
+    return undefined;
+  };
 
   const fetchCart = async () => {
     const token = localStorage.getItem('accessToken');
+    setIsLoggedIn(!!token);
+
     if (!token) {
       setLoading(false);
       return;
@@ -34,15 +58,23 @@ const CartPage = () => {
       }
 
       const data = await response.json();
-      setCartItems(data.content || []);
+      const items = data.content || [];
+
+      // 각 상품의 이미지 가져오기
+      const itemsWithImages = await Promise.all(
+        items.map(async (item: CartItem) => {
+          const mainImage = await fetchProductImage(item.productId);
+          return { ...item, mainImage };
+        })
+      );
+
+      setCartItems(itemsWithImages);
     } catch (error) {
       console.error('장바구니 조회 실패:', error);
     } finally {
       setLoading(false);
     }
   };
-
-  const isLoggedIn = !!localStorage.getItem('accessToken');
 
   useEffect(() => {
     fetchCart();
@@ -138,8 +170,12 @@ const CartPage = () => {
                     index !== cartItems.length - 1 ? 'border-b' : ''
                   }`}
                 >
-                  <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
-                    <span className="text-gray-400 text-xs">이미지</span>
+                  <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center overflow-hidden">
+                    {item.mainImage ? (
+                      <img src={item.mainImage} alt={item.productTitle} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-gray-400 text-xs">이미지</span>
+                    )}
                   </div>
 
                   <div className="flex-1">
