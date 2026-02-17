@@ -47,7 +47,8 @@ const ProductListPage = () => {
     { value: 'latest', label: '최신순' },
     { value: 'price_asc', label: '가격 낮은순' },
     { value: 'price_desc', label: '가격 높은순' },
-    { value: 'popular', label: '인기순' },
+    { value: 'likes_count', label: '좋아요순' },
+    { value: 'popular', label: '주문순' },
   ];
 
   const fetchProductImage = async (productId: number): Promise<string | undefined> => {
