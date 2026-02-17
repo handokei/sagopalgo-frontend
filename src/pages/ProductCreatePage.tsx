@@ -58,7 +58,7 @@ const ProductCreatePage = () => {
 
     try {
       // 1. 상품 등록
-      const response = await fetch('http://localhost:8080/api/products/create', {
+      const response = await fetch('http://localhost:8080/api/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
