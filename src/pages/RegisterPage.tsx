@@ -3,7 +3,8 @@ import { useState } from 'react';
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState('');
 
@@ -11,7 +12,7 @@ const RegisterPage = () => {
     e.preventDefault();
     setError('');
 
-    if (password !== passwordConfirm) {
+    if (password !== confirmPassword) {
       setError('비밀번호가 일치하지 않습니다.');
       return;
     }
@@ -22,16 +23,17 @@ const RegisterPage = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, nickname }),
+        body: JSON.stringify({ email, password, confirmPassword, name, nickname, userRole: 'ROLE_USER' }),
       });
 
       if (!response.ok) {
-        throw new Error('회원가입 실패');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || '회원가입 실패');
       }
 
       window.location.href = '/login';
     } catch (err) {
-      setError('회원가입에 실패했습니다. 다시 시도해주세요.');
+      setError(err instanceof Error ? err.message : '회원가입에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -57,6 +59,22 @@ const RegisterPage = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
+              이름
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="이름 입력 (2~10글자)"
+              minLength={2}
+              maxLength={10}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               닉네임
             </label>
             <input
@@ -64,7 +82,9 @@ const RegisterPage = () => {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="닉네임 입력"
+              placeholder="닉네임 입력 (2~10글자)"
+              minLength={2}
+              maxLength={10}
               required
             />
           </div>
@@ -78,7 +98,8 @@ const RegisterPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="비밀번호 입력"
+              placeholder="8글자 이상, 대소문자/숫자/특수문자 포함"
+              minLength={8}
               required
             />
           </div>
@@ -89,8 +110,8 @@ const RegisterPage = () => {
             </label>
             <input
               type="password"
-              value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="비밀번호 다시 입력"
               required
