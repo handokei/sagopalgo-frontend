@@ -15,6 +15,9 @@ const OrderPage = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [address, setAddress] = useState('');
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -69,6 +72,11 @@ const OrderPage = () => {
       return;
     }
 
+    if (!name.trim() || !phoneNumber.trim() || !address.trim()) {
+      alert('배송 정보를 모두 입력해주세요.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -83,6 +91,9 @@ const OrderPage = () => {
             productId: item.productId,
             quantity: item.quantity,
           })),
+          name,
+          phoneNumber,
+          address,
         }),
       });
 
@@ -135,6 +146,45 @@ const OrderPage = () => {
               <p className="font-bold">{formatPrice(item.productPrice * item.quantity)}</p>
             </div>
           ))}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="font-semibold mb-4">배송 정보</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">수령인</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="수령인 이름을 입력하세요"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
+              <input
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="010-0000-0000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">배송지 주소</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="배송지 주소를 입력하세요"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
