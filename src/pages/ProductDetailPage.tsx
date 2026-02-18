@@ -268,7 +268,6 @@ const ProductDetailPage = () => {
 
               <div className="border-t border-b py-4 mb-6 space-y-2 text-gray-600">
                 <p>판매자: {product.sellerNickname}</p>
-                <p>재고: {product.stock}개</p>
                 <p>등록일: {formatDate(product.createdAt)}</p>
               </div>
 
@@ -283,7 +282,7 @@ const ProductDetailPage = () => {
                   </button>
                   <span className="px-4 py-2 border-x">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                    onClick={() => setQuantity(quantity + 1)}
                     className="px-3 py-2 hover:bg-gray-100"
                   >
                     +
