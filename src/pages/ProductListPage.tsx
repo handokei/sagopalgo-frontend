@@ -13,6 +13,7 @@ interface Product {
   price: number;
   productStatus: string;
   productCategory: string;
+  stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
   sellerNickname: string;
   mainImage?: string;
 }
@@ -175,7 +176,19 @@ const ProductListPage = () => {
                   )}
                 </div>
                 <div className="p-4">
-                  <div className="text-xs text-blue-500 mb-1">{getCategoryLabel(product.productCategory)}</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-blue-500">{getCategoryLabel(product.productCategory)}</span>
+                    {product.stockStatus === 'LOW_STOCK' && (
+                      <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs font-semibold rounded">
+                        품절임박
+                      </span>
+                    )}
+                    {product.stockStatus === 'OUT_OF_STOCK' && (
+                      <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded">
+                        품절
+                      </span>
+                    )}
+                  </div>
                   <h3 className="font-semibold text-lg mb-1 truncate">{product.title}</h3>
                   <p className="text-blue-600 font-bold text-xl mb-2">{formatPrice(product.price)}</p>
                   <div className="flex justify-between text-sm text-gray-500">

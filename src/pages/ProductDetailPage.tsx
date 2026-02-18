@@ -10,6 +10,7 @@ interface Product {
   stock: number;
   productStatus: string;
   productCategory: string;
+  stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
   sellerNickname: string;
   createdAt: string;
 }
@@ -264,7 +265,19 @@ const ProductDetailPage = () => {
               </div>
 
               <h1 className="text-2xl font-bold mb-4">{product.title}</h1>
-              <p className="text-3xl font-bold text-blue-600 mb-6">{formatPrice(product.price)}</p>
+              <div className="flex items-center gap-3 mb-6">
+                <p className="text-3xl font-bold text-blue-600">{formatPrice(product.price)}</p>
+                {product.stockStatus === 'LOW_STOCK' && (
+                  <span className="px-2 py-1 bg-orange-100 text-orange-600 text-sm font-semibold rounded">
+                    품절 임박
+                  </span>
+                )}
+                {product.stockStatus === 'OUT_OF_STOCK' && (
+                  <span className="px-2 py-1 bg-red-100 text-red-600 text-sm font-semibold rounded">
+                    품절
+                  </span>
+                )}
+              </div>
 
               <div className="border-t border-b py-4 mb-6 space-y-2 text-gray-600">
                 <p>판매자: {product.sellerNickname}</p>
@@ -293,16 +306,16 @@ const ProductDetailPage = () => {
               <div className="flex gap-4">
                 <button
                   onClick={handleAddToCart}
-                  disabled={product.productStatus !== 'ON_SALE'}
+                  disabled={product.productStatus !== 'ON_SALE' || product.stockStatus === 'OUT_OF_STOCK'}
                   className="flex-1 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                  장바구니 담기
+                  {product.stockStatus === 'OUT_OF_STOCK' ? '품절' : '장바구니 담기'}
                 </button>
                 <button
-                  disabled={product.productStatus !== 'ON_SALE'}
+                  disabled={product.productStatus !== 'ON_SALE' || product.stockStatus === 'OUT_OF_STOCK'}
                   className="flex-1 py-3 border border-blue-500 text-blue-500 rounded-md hover:bg-blue-50 disabled:border-gray-300 disabled:text-gray-300 disabled:cursor-not-allowed"
                 >
-                  바로 구매
+                  {product.stockStatus === 'OUT_OF_STOCK' ? '품절' : '바로 구매'}
                 </button>
               </div>
             </div>
