@@ -14,41 +14,76 @@ interface Order {
   createAt: string | number[];
 }
 
+interface PageInfo {
+  totalPages: number;
+  totalElements: number;
+  number: number;
+  size: number;
+  first: boolean;
+  last: boolean;
+}
+
 const OrderListPage = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const fetchOrders = async (page: number = 0) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let url = `/api/orders?page=${page}&size=10`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
+
+      const response = await fetch(buildApiUrl(url), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('주문 조회 실패');
+      }
+
+      const data = await response.json();
+      setOrders(data.content || []);
+      setPageInfo({
+        totalPages: data.totalPages,
+        totalElements: data.totalElements,
+        number: data.number,
+        size: data.size,
+        first: data.first,
+        last: data.last,
+      });
+    } catch (error) {
+      console.error('주문 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+    fetchOrders(currentPage);
+  }, [navigate, currentPage]);
 
-      try {
-        const response = await fetch(buildApiUrl('/api/orders'), {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+  const handleSearch = () => {
+    setCurrentPage(0);
+    fetchOrders(0);
+  };
 
-        if (!response.ok) {
-          throw new Error('주문 조회 실패');
-        }
-
-        const data = await response.json();
-        setOrders(data.content || []);
-      } catch (error) {
-        console.error('주문 조회 실패:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, [navigate]);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('ko-KR') + '원';
@@ -104,40 +139,132 @@ const OrderListPage = () => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">주문 내역</h1>
 
+        {/* 날짜 필터 */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">시작일</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="border rounded px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">종료일</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="border rounded px-3 py-2"
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              검색
+            </button>
+            <button
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+                setCurrentPage(0);
+                fetchOrders(0);
+              }}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+            >
+              초기화
+            </button>
+          </div>
+        </div>
+
         {orders.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <p className="text-gray-500 mb-4">주문 내역이 없습니다.</p>
             <a href="/" className="text-blue-500 hover:underline">쇼핑하러 가기</a>
           </div>
         ) : (
-          <div className="space-y-4">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="bg-white rounded-lg shadow-md p-6"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <p className="text-sm text-gray-500">{formatDate(order.createAt)}</p>
-                    <p className="text-sm text-gray-400">주문번호: {order.id}</p>
+          <>
+            <div className="space-y-4">
+              {orders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-white rounded-lg shadow-md p-6"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="text-sm text-gray-500">{formatDate(order.createAt)}</p>
+                      <p className="text-sm text-gray-400">주문번호: {order.id}</p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(order.orderStatus)}`}>
+                      {getStatusText(order.orderStatus)}
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(order.orderStatus)}`}>
-                    {getStatusText(order.orderStatus)}
-                  </span>
+                  <p className="font-semibold mb-2">{order.productTitle}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold text-blue-600">{formatPrice(order.totalPrice)}</span>
+                    <a
+                      href={`/orders/${order.id}`}
+                      className="text-blue-500 hover:underline text-sm"
+                    >
+                      상세보기
+                    </a>
+                  </div>
                 </div>
-                <p className="font-semibold mb-2">{order.productTitle}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold text-blue-600">{formatPrice(order.totalPrice)}</span>
-                  <a
-                    href={`/orders/${order.id}`}
-                    className="text-blue-500 hover:underline text-sm"
+              ))}
+            </div>
+
+            {/* 페이지네이션 */}
+            {pageInfo && pageInfo.totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-6">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={pageInfo.first}
+                  className={`px-3 py-1 rounded ${
+                    pageInfo.first
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 hover:bg-gray-300'
+                  }`}
+                >
+                  이전
+                </button>
+
+                {Array.from({ length: pageInfo.totalPages }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handlePageChange(i)}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === i
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
                   >
-                    상세보기
-                  </a>
-                </div>
+                    {i + 1}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={pageInfo.last}
+                  className={`px-3 py-1 rounded ${
+                    pageInfo.last
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 hover:bg-gray-300'
+                  }`}
+                >
+                  다음
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+
+            {pageInfo && (
+              <p className="text-center text-sm text-gray-500 mt-2">
+                총 {pageInfo.totalElements}건
+              </p>
+            )}
+          </>
         )}
       </div>
     </Layout>
