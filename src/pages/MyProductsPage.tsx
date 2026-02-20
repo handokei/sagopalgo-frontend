@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface Product {
   id: number;
@@ -26,7 +27,7 @@ const MyProductsPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:8080/api/products/me', {
+        const response = await fetch(buildApiUrl('/api/products/me'), {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -53,7 +54,7 @@ const MyProductsPage = () => {
 
     const token = localStorage.getItem('accessToken');
     try {
-      const response = await fetch(`http://localhost:8080/api/products/${productId}`, {
+      const response = await fetch(buildApiUrl(`/api/products/${productId}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

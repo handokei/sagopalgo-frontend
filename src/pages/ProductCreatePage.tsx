@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 const ProductCreatePage = () => {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ const ProductCreatePage = () => {
 
     try {
       // 1. 상품 등록
-      const response = await fetch('http://localhost:8080/api/products', {
+      const response = await fetch(buildApiUrl('/api/products'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +89,7 @@ const ProductCreatePage = () => {
           formData.append('files', file);
         });
 
-        await fetch(`http://localhost:8080/api/products/${productId}/images`, {
+        await fetch(buildApiUrl(`/api/products/${productId}/images`), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

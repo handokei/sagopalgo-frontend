@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface Order {
   id: number;
@@ -29,7 +30,7 @@ const OrderDetailPage = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:8080/api/orders/${id}`, {
+        const response = await fetch(buildApiUrl(`/api/orders/${id}`), {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -96,7 +97,7 @@ const OrderDetailPage = () => {
     setActionLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/orders/${id}/${action}`, {
+      const response = await fetch(buildApiUrl(`/api/orders/${id}/${action}`), {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

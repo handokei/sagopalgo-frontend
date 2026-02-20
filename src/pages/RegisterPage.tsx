@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buildApiUrl } from '../lib/api';
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
@@ -18,7 +19,7 @@ const RegisterPage = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/users/register', {
+      const response = await fetch(buildApiUrl('/api/users/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
