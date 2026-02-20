@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface CartItem {
   id: number;
@@ -23,7 +24,7 @@ const CartPage = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/carts/me', {
+      const response = await fetch(buildApiUrl('/api/carts/me'), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -53,7 +54,7 @@ const CartPage = () => {
 
     const token = localStorage.getItem('accessToken');
     try {
-      await fetch(`http://localhost:8080/api/carts/me/items/${itemId}`, {
+      await fetch(buildApiUrl(`/api/carts/me/items/${itemId}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ const CartPage = () => {
   const removeItem = async (itemId: number) => {
     const token = localStorage.getItem('accessToken');
     try {
-      await fetch(`http://localhost:8080/api/carts/me/items/${itemId}`, {
+      await fetch(buildApiUrl(`/api/carts/me/items/${itemId}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

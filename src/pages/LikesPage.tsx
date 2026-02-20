@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface ProductImage {
   id: number;
@@ -24,11 +25,11 @@ const LikesPage = () => {
 
   const fetchProductImage = async (productId: number): Promise<string | undefined> => {
     try {
-      const response = await fetch(`http://localhost:8080/api/products/${productId}/images`);
+      const response = await fetch(buildApiUrl(`/api/products/${productId}/images`));
       if (response.ok) {
         const images: ProductImage[] = await response.json();
         const mainImage = images.find(img => img.main) || images[0];
-        return mainImage ? `http://localhost:8080${mainImage.imageUrl}` : undefined;
+        return mainImage ? buildApiUrl(mainImage.imageUrl) : undefined;
       }
     } catch (error) {
       console.error('이미지 조회 실패:', error);
@@ -45,7 +46,7 @@ const LikesPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:8080/api/products/me/likes', {
+        const response = await fetch(buildApiUrl('/api/products/me/likes'), {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -80,7 +81,7 @@ const LikesPage = () => {
   const handleUnlike = async (productId: number) => {
     const token = localStorage.getItem('accessToken');
     try {
-      await fetch(`http://localhost:8080/api/products/${productId}/likes`, {
+      await fetch(buildApiUrl(`/api/products/${productId}/likes`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

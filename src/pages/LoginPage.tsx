@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buildApiUrl } from '../lib/api';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -10,7 +11,7 @@ const LoginPage = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8080/api/users/login', {
+      const response = await fetch(buildApiUrl('/api/users/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

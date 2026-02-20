@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface ProductImage {
   id: number;
@@ -54,11 +55,11 @@ const ProductListPage = () => {
 
   const fetchProductImage = async (productId: number): Promise<string | undefined> => {
     try {
-      const response = await fetch(`http://localhost:8080/api/products/${productId}/images`);
+      const response = await fetch(buildApiUrl(`/api/products/${productId}/images`));
       if (response.ok) {
         const images: ProductImage[] = await response.json();
         const mainImage = images.find(img => img.main) || images[0];
-        return mainImage ? `http://localhost:8080${mainImage.imageUrl}` : undefined;
+        return mainImage ? buildApiUrl(mainImage.imageUrl) : undefined;
       }
     } catch (error) {
       console.error('이미지 조회 실패:', error);
@@ -76,7 +77,7 @@ const ProductListPage = () => {
       if (category) params.append('productCategory', category);
       if (sort) params.append('sort', sort);
 
-      const response = await fetch(`http://localhost:8080/api/products?${params}`);
+      const response = await fetch(buildApiUrl(`/api/products?${params}`));
       const data: PageResponse = await response.json();
 
       // 각 상품의 대표 이미지 가져오기

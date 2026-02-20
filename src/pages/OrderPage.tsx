@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface ProductImage {
   id: number;
@@ -28,11 +29,11 @@ const OrderPage = () => {
 
   const fetchProductImage = async (productId: number): Promise<string | undefined> => {
     try {
-      const response = await fetch(`http://localhost:8080/api/products/${productId}/images`);
+      const response = await fetch(buildApiUrl(`/api/products/${productId}/images`));
       if (response.ok) {
         const images: ProductImage[] = await response.json();
         const mainImage = images.find(img => img.main) || images[0];
-        return mainImage ? `http://localhost:8080${mainImage.imageUrl}` : undefined;
+        return mainImage ? buildApiUrl(mainImage.imageUrl) : undefined;
       }
     } catch (error) {
       console.error('이미지 조회 실패:', error);
@@ -49,7 +50,7 @@ const OrderPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:8080/api/carts/me', {
+        const response = await fetch(buildApiUrl('/api/carts/me'), {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -110,7 +111,7 @@ const OrderPage = () => {
     setSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/orders', {
+      const response = await fetch(buildApiUrl('/api/orders'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

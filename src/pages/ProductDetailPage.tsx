@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface Product {
   id: number;
@@ -44,7 +45,7 @@ const ProductDetailPage = () => {
           headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const response = await fetch(`http://localhost:8080/api/products/${id}`, {
+        const response = await fetch(buildApiUrl(`/api/products/${id}`), {
           headers,
         });
 
@@ -56,7 +57,7 @@ const ProductDetailPage = () => {
         setProduct(data);
 
         // 이미지 조회
-        const imagesResponse = await fetch(`http://localhost:8080/api/products/${id}/images`);
+        const imagesResponse = await fetch(buildApiUrl(`/api/products/${id}/images`));
         if (imagesResponse.ok) {
           const imagesData = await imagesResponse.json();
           setImages(imagesData);
@@ -78,7 +79,7 @@ const ProductDetailPage = () => {
 
   const checkLikeStatus = async (token: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/products/${id}/likes/check`, {
+      const response = await fetch(buildApiUrl(`/api/products/${id}/likes/check`), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -103,7 +104,7 @@ const ProductDetailPage = () => {
     setLikeLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/products/${id}/likes`, {
+      const response = await fetch(buildApiUrl(`/api/products/${id}/likes`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -129,7 +130,7 @@ const ProductDetailPage = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/carts/me/items', {
+      const response = await fetch(buildApiUrl('/api/carts/me/items'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -207,7 +208,7 @@ const ProductDetailPage = () => {
                 <div>
                   <div className="h-96 bg-gray-100">
                     <img
-                      src={`http://localhost:8080${images[selectedImageIndex].imageUrl}`}
+                      src={buildApiUrl(images[selectedImageIndex].imageUrl)}
                       alt={product.title}
                       className="w-full h-full object-contain"
                     />
@@ -223,7 +224,7 @@ const ProductDetailPage = () => {
                           }`}
                         >
                           <img
-                            src={`http://localhost:8080${image.imageUrl}`}
+                            src={buildApiUrl(image.imageUrl)}
                             alt={`${product.title} ${index + 1}`}
                             className="w-full h-full object-cover"
                           />

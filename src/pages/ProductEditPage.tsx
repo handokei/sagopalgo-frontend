@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface ProductImage {
   id: number;
@@ -49,7 +50,7 @@ const ProductEditPage = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:8080/api/products/${id}`, {
+        const response = await fetch(buildApiUrl(`/api/products/${id}`), {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -68,7 +69,7 @@ const ProductEditPage = () => {
         setStatus(data.productStatus);
 
         // 이미지 조회
-        const imagesResponse = await fetch(`http://localhost:8080/api/products/${id}/images`);
+        const imagesResponse = await fetch(buildApiUrl(`/api/products/${id}/images`));
         if (imagesResponse.ok) {
           const imagesData = await imagesResponse.json();
           setExistingImages(imagesData);
@@ -110,7 +111,7 @@ const ProductEditPage = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/products/${id}/images/${imageId}`, {
+      const response = await fetch(buildApiUrl(`/api/products/${id}/images/${imageId}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -139,7 +140,7 @@ const ProductEditPage = () => {
 
     try {
       // 1. 상품 정보 수정
-      const response = await fetch(`http://localhost:8080/api/products/${id}`, {
+      const response = await fetch(buildApiUrl(`/api/products/${id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +167,7 @@ const ProductEditPage = () => {
           formData.append('files', file);
         });
 
-        await fetch(`http://localhost:8080/api/products/${id}/images`, {
+        await fetch(buildApiUrl(`/api/products/${id}/images`), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -208,7 +209,7 @@ const ProductEditPage = () => {
               {existingImages.map((image, index) => (
                 <div key={image.id} className="relative w-24 h-24">
                   <img
-                    src={`http://localhost:8080${image.imageUrl}`}
+                    src={buildApiUrl(image.imageUrl)}
                     alt={`이미지 ${index + 1}`}
                     className="w-full h-full object-cover rounded-lg border"
                   />

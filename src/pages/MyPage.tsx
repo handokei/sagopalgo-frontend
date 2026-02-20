@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface User {
   id: number;
@@ -26,7 +27,7 @@ const MyPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:8080/api/users/me', {
+        const response = await fetch(buildApiUrl('/api/users/me'), {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -56,7 +57,7 @@ const MyPage = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8080/api/users/me', {
+      const response = await fetch(buildApiUrl('/api/users/me'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

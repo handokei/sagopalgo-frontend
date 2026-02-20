@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { buildApiUrl } from '../lib/api';
 
 interface Order {
   id: number;
@@ -27,7 +28,7 @@ const OrderListPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:8080/api/orders', {
+        const response = await fetch(buildApiUrl('/api/orders'), {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
