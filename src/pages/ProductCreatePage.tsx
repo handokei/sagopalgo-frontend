@@ -1,7 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { buildApiUrl } from '../lib/api';
+
+interface Category {
+  id: number;
+  name: string;
+}
 
 const ProductCreatePage = () => {
   const navigate = useNavigate();
@@ -10,19 +15,30 @@ const ProductCreatePage = () => {
   const [contents, setContents] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('1');
-  const [category, setCategory] = useState('T_SHIRT');
+  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [categories, setCategories] = useState<Category[]>([]);
   const [images, setImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const categories = [
-    { value: 'T_SHIRT', label: '티셔츠' },
-    { value: 'HOODIE', label: '후드' },
-    { value: 'OUTER', label: '아우터' },
-    { value: 'PANTS', label: '바지' },
-    { value: 'SHOES', label: '신발' },
-  ];
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(buildApiUrl('/api/categories'));
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+          if (data.length > 0) {
+            setCategoryId(data[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('카테고리 로딩 실패:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -55,6 +71,11 @@ const ProductCreatePage = () => {
       return;
     }
 
+    if (!categoryId) {
+      setError('카테고리를 선택해주세요.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -71,7 +92,7 @@ const ProductCreatePage = () => {
           price: Number(price),
           stock: Number(stock),
           productStatus: 'ON_SALE',
-          productCategory: category,
+          categoryId: categoryId,
         }),
       });
 
@@ -172,12 +193,14 @@ const ProductCreatePage = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(Number(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
             >
+              <option value="">카테고리 선택</option>
               {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
           </div>
