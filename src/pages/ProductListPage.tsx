@@ -8,12 +8,18 @@ interface ProductImage {
   main: boolean;
 }
 
+interface Category {
+  id: number;
+  name: string;
+}
+
 interface Product {
   id: number;
   title: string;
   price: number;
   productStatus: string;
-  productCategory: string;
+  categoryId: number;
+  categoryName: string;
   stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
   sellerNickname: string;
   mainImage?: string;
@@ -31,18 +37,10 @@ const ProductListPage = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [keyword, setKeyword] = useState('');
-  const [category, setCategory] = useState('');
+  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [categories, setCategories] = useState<Category[]>([]);
   const [sort, setSort] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const categories = [
-    { value: '', label: '전체' },
-    { value: 'T_SHIRT', label: '티셔츠' },
-    { value: 'HOODIE', label: '후드' },
-    { value: 'OUTER', label: '아우터' },
-    { value: 'PANTS', label: '바지' },
-    { value: 'SHOES', label: '신발' },
-  ];
 
   const sortOptions = [
     { value: '', label: '정렬' },
@@ -52,6 +50,21 @@ const ProductListPage = () => {
     { value: 'likes_count', label: '좋아요순' },
     { value: 'popular', label: '주문순' },
   ];
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(buildApiUrl('/api/categories'));
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        }
+      } catch (err) {
+        console.error('카테고리 로딩 실패:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const fetchProductImage = async (productId: number): Promise<string | undefined> => {
     try {
@@ -74,7 +87,7 @@ const ProductListPage = () => {
       params.append('page', page.toString());
       params.append('size', '12');
       if (keyword) params.append('keyword', keyword);
-      if (category) params.append('productCategory', category);
+      if (categoryId) params.append('categoryId', categoryId.toString());
       if (sort) params.append('sort', sort);
 
       const response = await fetch(buildApiUrl(`/api/products?${params}`));
@@ -99,7 +112,7 @@ const ProductListPage = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [page, category, sort]);
+  }, [page, categoryId, sort]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,11 +122,6 @@ const ProductListPage = () => {
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('ko-KR') + '원';
-  };
-
-  const getCategoryLabel = (categoryValue: string) => {
-    const cat = categories.find(c => c.value === categoryValue);
-    return cat ? cat.label : categoryValue;
   };
 
   return (
@@ -128,12 +136,13 @@ const ProductListPage = () => {
             className="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
             className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
+            <option value="">전체</option>
             {categories.map((cat) => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
           <select
@@ -178,7 +187,7 @@ const ProductListPage = () => {
                 </div>
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-blue-500">{getCategoryLabel(product.productCategory)}</span>
+                    <span className="text-xs text-blue-500">{product.categoryName}</span>
                     {product.stockStatus === 'LOW_STOCK' && (
                       <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs font-semibold rounded">
                         품절임박
