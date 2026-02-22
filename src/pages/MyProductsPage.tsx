@@ -9,7 +9,8 @@ interface Product {
   price: number;
   stock: number;
   productStatus: string;
-  productCategory: string;
+  categoryId: number;
+  categoryName: string;
   createdAt: string;
 }
 

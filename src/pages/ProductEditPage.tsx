@@ -11,6 +11,11 @@ interface ProductImage {
   main: boolean;
 }
 
+interface Category {
+  id: number;
+  name: string;
+}
+
 const ProductEditPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -19,7 +24,8 @@ const ProductEditPage = () => {
   const [contents, setContents] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
-  const [category, setCategory] = useState('');
+  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [categories, setCategories] = useState<Category[]>([]);
   const [status, setStatus] = useState('');
   const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
   const [newImages, setNewImages] = useState<File[]>([]);
@@ -28,18 +34,25 @@ const ProductEditPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const categories = [
-    { value: 'T_SHIRT', label: '티셔츠' },
-    { value: 'HOODIE', label: '후드' },
-    { value: 'OUTER', label: '아우터' },
-    { value: 'PANTS', label: '바지' },
-    { value: 'SHOES', label: '신발' },
-  ];
-
   const statuses = [
     { value: 'ON_SALE', label: '판매중' },
     { value: 'SOLD_OUT', label: '판매완료' },
   ];
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(buildApiUrl('/api/categories'));
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        }
+      } catch (err) {
+        console.error('카테고리 로딩 실패:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -65,7 +78,7 @@ const ProductEditPage = () => {
         setContents(data.contents);
         setPrice(data.price.toString());
         setStock(data.stock.toString());
-        setCategory(data.productCategory);
+        setCategoryId(data.categoryId);
         setStatus(data.productStatus);
 
         // 이미지 조회
@@ -152,7 +165,7 @@ const ProductEditPage = () => {
           price: Number(price),
           stock: Number(stock),
           productStatus: status,
-          productCategory: category,
+          categoryId: categoryId,
         }),
       });
 
@@ -280,12 +293,12 @@ const ProductEditPage = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={categoryId}
+                onChange={(e) => setCategoryId(Number(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {categories.map((cat) => (
-                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
             </div>
