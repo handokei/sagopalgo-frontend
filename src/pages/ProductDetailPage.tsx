@@ -10,7 +10,8 @@ interface Product {
   price: number;
   stock: number;
   productStatus: string;
-  productCategory: string;
+  categoryId: number;
+  categoryName: string;
   stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
   sellerNickname: string;
   createdAt: string;
@@ -165,17 +166,6 @@ const ProductDetailPage = () => {
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
 
-  const getCategoryLabel = (category: string) => {
-    const categoryMap: { [key: string]: string } = {
-      'T_SHIRT': '티셔츠',
-      'HOODIE': '후드',
-      'OUTER': '아우터',
-      'PANTS': '바지',
-      'SHOES': '신발',
-    };
-    return categoryMap[category] || category;
-  };
-
   if (loading) {
     return (
       <Layout>
@@ -244,7 +234,7 @@ const ProductDetailPage = () => {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-                    {getCategoryLabel(product.productCategory)}
+                    {product.categoryName}
                   </span>
                   <span className={`ml-2 px-3 py-1 rounded-full text-sm ${
                     product.productStatus === 'ON_SALE'
