@@ -12,6 +12,7 @@ import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
 import MyProductsPage from './pages/MyProductsPage';
 import LikesPage from './pages/LikesPage';
+import OAuthCallbackPage from './pages/OAuthCallbackPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/orders" element={<OrderListPage />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
         <Route path="/mypage" element={<MyPage />} />
+        <Route path="/oauth2/callback" element={<OAuthCallbackPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
       </Routes>
