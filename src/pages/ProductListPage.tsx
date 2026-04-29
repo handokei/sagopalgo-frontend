@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
+import ProductCard from '../components/ProductCard';
+import type { ProductCardData } from '../components/ProductCard';
 import { buildApiUrl } from '../lib/api';
 
 interface ProductImage {
@@ -14,7 +16,7 @@ interface Category {
   name: string;
 }
 
-interface Product {
+interface ApiProduct {
   id: number;
   title: string;
   price: number;
@@ -23,35 +25,51 @@ interface Product {
   categoryName: string;
   stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
   sellerNickname: string;
-  mainImage?: string;
 }
 
 interface PageResponse {
-  content: Product[];
+  content: ApiProduct[];
   totalPages: number;
   totalElements: number;
   number: number;
 }
 
+const sortOptions = [
+  { value: '', label: '추천순' },
+  { value: 'latest', label: '신상품순' },
+  { value: 'popular', label: '인기순' },
+  { value: 'price_asc', label: '낮은가격순' },
+  { value: 'price_desc', label: '높은가격순' },
+  { value: 'likes_count', label: '좋아요순' },
+];
+
+const fetchProductImage = async (productId: number): Promise<string | undefined> => {
+  try {
+    const response = await fetch(buildApiUrl(`/api/products/${productId}/images`));
+    if (response.ok) {
+      const images: ProductImage[] = await response.json();
+      const mainImage = images.find(img => img.main) || images[0];
+      return mainImage?.imageUrl;
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+};
+
 const ProductListPage = () => {
-  const [searchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [products, setProducts] = useState<ProductCardData[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [keyword, setKeyword] = useState(searchParams.get('keyword') ?? '');
-  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [categoryId, setCategoryId] = useState<number | ''>(
+    searchParams.get('categoryId') ? Number(searchParams.get('categoryId')) : ''
+  );
   const [categories, setCategories] = useState<Category[]>([]);
   const [sort, setSort] = useState(searchParams.get('sort') ?? '');
   const [loading, setLoading] = useState(false);
-
-  const sortOptions = [
-    { value: '', label: '정렬' },
-    { value: 'latest', label: '최신순' },
-    { value: 'price_asc', label: '가격 낮은순' },
-    { value: 'price_desc', label: '가격 높은순' },
-    { value: 'likes_count', label: '좋아요순' },
-    { value: 'popular', label: '주문순' },
-  ];
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -68,26 +86,22 @@ const ProductListPage = () => {
     fetchCategories();
   }, []);
 
-  const fetchProductImage = async (productId: number): Promise<string | undefined> => {
-    try {
-      const response = await fetch(buildApiUrl(`/api/products/${productId}/images`));
-      if (response.ok) {
-        const images: ProductImage[] = await response.json();
-        const mainImage = images.find(img => img.main) || images[0];
-        return mainImage ? buildApiUrl(mainImage.imageUrl) : undefined;
-      }
-    } catch (error) {
-      console.error('이미지 조회 실패:', error);
-    }
-    return undefined;
-  };
+  useEffect(() => {
+    const urlKeyword = searchParams.get('keyword') ?? '';
+    const urlSort = searchParams.get('sort') ?? '';
+    const urlCategoryId = searchParams.get('categoryId');
+    if (urlKeyword !== keyword) setKeyword(urlKeyword);
+    if (urlSort !== sort) setSort(urlSort);
+    if (urlCategoryId && Number(urlCategoryId) !== categoryId) setCategoryId(Number(urlCategoryId));
+    if (!urlCategoryId && categoryId !== '') setCategoryId('');
+  }, [searchParams]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
-      params.append('size', '12');
+      params.append('size', '16');
       if (keyword) params.append('keyword', keyword);
       if (categoryId) params.append('categoryId', categoryId.toString());
       if (sort) params.append('sort', sort);
@@ -95,16 +109,23 @@ const ProductListPage = () => {
       const response = await fetch(buildApiUrl(`/api/products?${params}`));
       const data: PageResponse = await response.json();
 
-      // 각 상품의 대표 이미지 가져오기
       const productsWithImages = await Promise.all(
-        data.content.map(async (product) => {
-          const mainImage = await fetchProductImage(product.id);
-          return { ...product, mainImage };
+        data.content.map(async (p) => {
+          const mainImage = await fetchProductImage(p.id);
+          return {
+            id: p.id,
+            title: p.title,
+            price: p.price,
+            categoryName: p.categoryName,
+            sellerNickname: p.sellerNickname,
+            mainImage,
+          };
         })
       );
 
       setProducts(productsWithImages);
       setTotalPages(data.totalPages);
+      setTotalElements(data.totalElements);
     } catch (error) {
       console.error('상품 조회 실패:', error);
     } finally {
@@ -113,140 +134,218 @@ const ProductListPage = () => {
   };
 
   useEffect(() => {
-    const urlKeyword = searchParams.get('keyword') ?? '';
-    const urlSort = searchParams.get('sort') ?? '';
-    if (urlKeyword !== keyword) setKeyword(urlKeyword);
-    if (urlSort !== sort) setSort(urlSort);
-  }, [searchParams]);
-
-  useEffect(() => {
     fetchProducts();
   }, [page, categoryId, sort, keyword]);
+
+  const handleSortChange = (newSort: string) => {
+    setSort(newSort);
+    setPage(0);
+    const params = new URLSearchParams(searchParams);
+    if (newSort) params.set('sort', newSort);
+    else params.delete('sort');
+    setSearchParams(params);
+  };
+
+  const handleCategoryChange = (catId: number | '') => {
+    setCategoryId(catId);
+    setPage(0);
+    const params = new URLSearchParams(searchParams);
+    if (catId) params.set('categoryId', catId.toString());
+    else params.delete('categoryId');
+    setSearchParams(params);
+  };
+
+  const handleKeywordClear = () => {
+    setKeyword('');
+    setPage(0);
+    const params = new URLSearchParams(searchParams);
+    params.delete('keyword');
+    setSearchParams(params);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(0);
-    fetchProducts();
+    const params = new URLSearchParams(searchParams);
+    if (keyword) params.set('keyword', keyword);
+    else params.delete('keyword');
+    setSearchParams(params);
   };
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('ko-KR') + '원';
-  };
+  const selectedCategory = categories.find(c => c.id === categoryId);
+
+  // 페이지네이션 번호 생성
+  const pageNumbers: (number | '...')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 0; i < totalPages; i++) pageNumbers.push(i);
+  } else {
+    pageNumbers.push(0);
+    if (page > 2) pageNumbers.push('...');
+    for (let i = Math.max(1, page - 1); i <= Math.min(totalPages - 2, page + 1); i++) {
+      pageNumbers.push(i);
+    }
+    if (page < totalPages - 3) pageNumbers.push('...');
+    pageNumbers.push(totalPages - 1);
+  }
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <form onSubmit={handleSearch} className="mb-6 flex gap-4 flex-wrap">
-          <input
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="상품 검색..."
-            className="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">전체</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {sortOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-          >
-            검색
-          </button>
-        </form>
+      <div className="max-w-content mx-auto px-8 py-8">
+        {/* 헤더 */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-[12px] text-ink-faint mb-3">
+            <a href="/" className="hover:text-ink">홈</a>
+            <span>›</span>
+            <span className="text-ink">{selectedCategory?.name ?? '전체 상품'}</span>
+          </div>
+          <h1 className="text-[32px] font-extrabold tracking-tightish">
+            {keyword ? `"${keyword}" 검색 결과` : selectedCategory?.name ?? '전체 상품'}
+          </h1>
+          <p className="text-[13px] text-ink-soft mt-1">
+            {totalElements.toLocaleString()}개 상품
+          </p>
+        </div>
 
-        {loading ? (
-          <div className="text-center py-20">로딩 중...</div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">상품이 없습니다.</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <a
-                key={product.id}
-                href={`/products/${product.id}`}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                <div className="h-48 bg-gray-200 flex items-center justify-center">
-                  {product.mainImage ? (
-                    <img
-                      src={product.mainImage}
-                      alt={product.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-gray-400">이미지 없음</span>
-                  )}
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-blue-500">{product.categoryName}</span>
-                    {product.stockStatus === 'LOW_STOCK' && (
-                      <span className="px-1.5 py-0.5 bg-orange-100 text-orange-600 text-xs font-semibold rounded">
-                        품절임박
-                      </span>
-                    )}
-                    {product.stockStatus === 'OUT_OF_STOCK' && (
-                      <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded">
-                        품절
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-semibold text-lg mb-1 truncate">{product.title}</h3>
-                  <p className="text-blue-600 font-bold text-xl mb-2">{formatPrice(product.price)}</p>
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>{product.sellerNickname}</span>
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      product.productStatus === 'ON_SALE'
-                        ? 'bg-green-100 text-green-600'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {product.productStatus === 'ON_SALE' ? '판매중' : '판매완료'}
+        <div className="flex gap-8">
+          {/* 사이드바 필터 */}
+          <aside className="w-[220px] shrink-0">
+            <h3 className="text-[14px] font-semibold mb-4 pb-2 border-b border-line">필터</h3>
+
+            {/* 카테고리 필터 */}
+            <div className="mb-6">
+              <h4 className="text-[13px] font-medium mb-2">카테고리</h4>
+              <ul className="space-y-1.5">
+                <li>
+                  <button
+                    onClick={() => handleCategoryChange('')}
+                    className={`text-[13px] w-full text-left py-0.5 ${categoryId === '' ? 'text-ink font-semibold' : 'text-ink-soft hover:text-ink'}`}
+                  >
+                    전체
+                  </button>
+                </li>
+                {categories.map((cat) => (
+                  <li key={cat.id}>
+                    <button
+                      onClick={() => handleCategoryChange(cat.id)}
+                      className={`text-[13px] w-full text-left py-0.5 ${categoryId === cat.id ? 'text-ink font-semibold' : 'text-ink-soft hover:text-ink'}`}
+                    >
+                      {cat.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* 검색 */}
+            <div className="mb-6 pt-4 border-t border-line">
+              <h4 className="text-[13px] font-medium mb-2">검색</h4>
+              <form onSubmit={handleSearch}>
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="검색어 입력..."
+                  className="w-full px-3 py-2 text-[13px] border border-line rounded-sm bg-paper focus:outline-none focus:border-ink"
+                />
+              </form>
+            </div>
+          </aside>
+
+          {/* 메인 콘텐츠 */}
+          <div className="flex-1 min-w-0">
+            {/* 정렬 + 활성 필터 */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex gap-1.5 flex-wrap">
+                {sortOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleSortChange(opt.value)}
+                    className={sort === opt.value ? 'pill-fill' : 'pill'}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 활성 필터 태그 */}
+            {(keyword || categoryId) && (
+              <div className="flex items-center gap-2 mb-4 text-[12px]">
+                {keyword && (
+                  <button onClick={handleKeywordClear} className="pill">
+                    {keyword} ✕
+                  </button>
+                )}
+                {selectedCategory && (
+                  <button onClick={() => handleCategoryChange('')} className="pill">
+                    {selectedCategory.name} ✕
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    handleCategoryChange('');
+                    handleKeywordClear();
+                  }}
+                  className="text-ink-faint hover:text-ink ml-1"
+                >
+                  전체 해제
+                </button>
+              </div>
+            )}
+
+            {/* 상품 그리드 */}
+            {loading ? (
+              <div className="text-center py-20 text-ink-faint">로딩 중...</div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-20 text-ink-faint">상품이 없습니다.</div>
+            ) : (
+              <div className="grid grid-cols-4 gap-5">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="mt-10 flex items-center justify-center gap-1">
+                <button
+                  onClick={() => setPage(Math.max(0, page - 1))}
+                  disabled={page === 0}
+                  className="w-8 h-8 flex items-center justify-center text-[13px] border border-line rounded-sm disabled:opacity-30 hover:bg-paper-warm"
+                >
+                  ‹
+                </button>
+                {pageNumbers.map((p, i) =>
+                  p === '...' ? (
+                    <span key={`dots-${i}`} className="w-8 h-8 flex items-center justify-center text-[13px] text-ink-faint">
+                      ···
                     </span>
-                  </div>
-                </div>
-              </a>
-            ))}
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`w-8 h-8 flex items-center justify-center text-[13px] border rounded-sm ${
+                        page === p
+                          ? 'bg-ink text-paper border-ink font-semibold'
+                          : 'border-line hover:bg-paper-warm'
+                      }`}
+                    >
+                      {p + 1}
+                    </button>
+                  )
+                )}
+                <button
+                  onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="w-8 h-8 flex items-center justify-center text-[13px] border border-line rounded-sm disabled:opacity-30 hover:bg-paper-warm"
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </div>
-        )}
-
-        {totalPages > 1 && (
-          <div className="mt-8 flex justify-center gap-2">
-            <button
-              onClick={() => setPage(Math.max(0, page - 1))}
-              disabled={page === 0}
-              className="px-4 py-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              이전
-            </button>
-            <span className="px-4 py-2">
-              {page + 1} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-              disabled={page >= totalPages - 1}
-              className="px-4 py-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              다음
-            </button>
-          </div>
-        )}
+        </div>
       </div>
     </Layout>
   );
