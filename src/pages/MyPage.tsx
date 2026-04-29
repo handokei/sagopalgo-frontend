@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { buildApiUrl } from '../lib/api';
 
@@ -9,6 +9,13 @@ interface User {
   nickname: string;
   createdAt: string;
 }
+
+const menuItems = [
+  { label: '주문/배송', to: '/orders' },
+  { label: '찜한 상품', to: '/likes' },
+  { label: '내 상품', to: '/my/products' },
+  { label: '장바구니', to: '/cart' },
+];
 
 const MyPage = () => {
   const navigate = useNavigate();
@@ -21,60 +28,41 @@ const MyPage = () => {
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem('accessToken');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+      if (!token) { navigate('/login'); return; }
 
       try {
         const response = await fetch(buildApiUrl('/api/users/me'), {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
-
-        if (!response.ok) {
-          throw new Error('사용자 정보 조회 실패');
-        }
-
+        if (!response.ok) throw new Error();
         const data = await response.json();
         setUser(data);
         setNickname(data.nickname);
-      } catch (error) {
-        console.error('사용자 정보 조회 실패:', error);
+      } catch {
         localStorage.removeItem('accessToken');
         navigate('/login');
       } finally {
         setLoading(false);
       }
     };
-
     fetchUser();
   }, [navigate]);
 
   const handleUpdate = async () => {
     const token = localStorage.getItem('accessToken');
     setError('');
-
     try {
       const response = await fetch(buildApiUrl('/api/users/me'), {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ nickname }),
       });
-
-      if (!response.ok) {
-        throw new Error('수정 실패');
-      }
-
+      if (!response.ok) throw new Error();
       const data = await response.json();
       setUser(data);
       setEditing(false);
       alert('프로필이 수정되었습니다.');
-    } catch (error) {
+    } catch {
       setError('프로필 수정에 실패했습니다.');
     }
   };
@@ -85,125 +73,132 @@ const MyPage = () => {
     navigate('/login');
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
   if (loading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center py-20">
-          <span>로딩 중...</span>
-        </div>
-      </Layout>
-    );
+    return <Layout><div className="flex items-center justify-center py-20 text-ink-faint">로딩 중...</div></Layout>;
   }
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">마이페이지</h1>
-
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">내 정보</h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-500 mb-1">이메일</label>
-              <p className="text-gray-900">{user?.email}</p>
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-500 mb-1">닉네임</label>
-              {editing ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    onClick={handleUpdate}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                  >
-                    저장
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditing(false);
-                      setNickname(user?.nickname || '');
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    취소
-                  </button>
+      <div className="max-w-content mx-auto px-8 py-8">
+        <div className="grid grid-cols-[280px_1fr] gap-10">
+          {/* 사이드바 */}
+          <aside>
+            {/* 프로필 */}
+            <div className="mb-6 pb-6 border-b border-line">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-14 h-14 rounded-full bg-paper-warm border border-line flex items-center justify-center text-[18px] text-ink-faint">
+                  {user?.nickname?.charAt(0) ?? '?'}
                 </div>
-              ) : (
-                <div className="flex justify-between items-center">
-                  <p className="text-gray-900">{user?.nickname}</p>
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="text-blue-500 hover:underline text-sm"
-                  >
-                    수정
-                  </button>
+                <div>
+                  <p className="text-[16px] font-semibold text-ink">{user?.nickname} 님</p>
+                  <p className="text-[12px] text-ink-faint">{user?.email}</p>
                 </div>
-              )}
-              {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm text-gray-500 mb-1">가입일</label>
-              <p className="text-gray-900">{user?.createdAt && formatDate(user.createdAt)}</p>
-            </div>
+            {/* 메뉴 */}
+            <nav className="space-y-0.5">
+              {menuItems.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="block py-2.5 px-2 text-[14px] text-ink-soft hover:text-ink hover:bg-paper-warm rounded-sm"
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <div className="border-t border-line my-2" />
+              <Link
+                to="/products/create"
+                className="block py-2.5 px-2 text-[14px] text-ink-soft hover:text-ink hover:bg-paper-warm rounded-sm"
+              >
+                상품 등록
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left py-2.5 px-2 text-[14px] text-ink-faint hover:text-ink hover:bg-paper-warm rounded-sm"
+              >
+                로그아웃
+              </button>
+            </nav>
+          </aside>
+
+          {/* 메인 콘텐츠 */}
+          <div>
+            <h1 className="text-[28px] font-extrabold tracking-tightish mb-8">마이페이지</h1>
+
+            {/* 회원 정보 */}
+            <section className="border border-line bg-paper p-6 mb-8">
+              <h2 className="text-[16px] font-semibold mb-4">회원 정보</h2>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <span className="w-20 text-[13px] text-ink-soft">이메일</span>
+                  <span className="text-[14px]">{user?.email}</span>
+                </div>
+
+                <div className="flex items-center">
+                  <span className="w-20 text-[13px] text-ink-soft">닉네임</span>
+                  {editing ? (
+                    <div className="flex gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={nickname}
+                        onChange={(e) => setNickname(e.target.value)}
+                        className="flex-1 px-3 py-1.5 text-[14px] border border-line rounded-sm focus:outline-none focus:border-ink"
+                      />
+                      <button onClick={handleUpdate} className="btn-primary text-[12px] py-1.5 px-3">저장</button>
+                      <button
+                        onClick={() => { setEditing(false); setNickname(user?.nickname || ''); }}
+                        className="btn text-[12px] py-1.5 px-3"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-[14px]">{user?.nickname}</span>
+                      <button onClick={() => setEditing(true)} className="text-[12px] text-ink-faint hover:text-ink underline">
+                        수정
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {error && <p className="text-[12px] text-accent ml-20">{error}</p>}
+
+                <div className="flex items-center">
+                  <span className="w-20 text-[13px] text-ink-soft">가입일</span>
+                  <span className="text-[14px]">
+                    {user?.createdAt && new Date(user.createdAt).toLocaleDateString('ko-KR')}
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            {/* 바로가기 */}
+            <section>
+              <h2 className="text-[16px] font-semibold mb-4">바로가기</h2>
+              <div className="grid grid-cols-4 gap-4">
+                {[
+                  { label: '주문내역', to: '/orders', icon: '주문' },
+                  { label: '장바구니', to: '/cart', icon: '카트' },
+                  { label: '찜 목록', to: '/likes', icon: '찜' },
+                  { label: '내 상품', to: '/my/products', icon: '상품' },
+                ].map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="border border-line p-4 text-center hover:bg-paper-warm transition-colors"
+                  >
+                    <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-paper-warm border border-line flex items-center justify-center text-[11px] font-mono text-ink-soft">
+                      {item.icon}
+                    </div>
+                    <span className="text-[13px] text-ink">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">바로가기</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <a
-              href="/orders"
-              className="p-4 border rounded-lg hover:bg-gray-50 text-center"
-            >
-              <span className="block text-2xl mb-1">📦</span>
-              <span className="text-gray-700">주문 내역</span>
-            </a>
-            <a
-              href="/cart"
-              className="p-4 border rounded-lg hover:bg-gray-50 text-center"
-            >
-              <span className="block text-2xl mb-1">🛒</span>
-              <span className="text-gray-700">장바구니</span>
-            </a>
-            <a
-              href="/likes"
-              className="p-4 border rounded-lg hover:bg-gray-50 text-center"
-            >
-              <span className="block text-2xl mb-1">❤️</span>
-              <span className="text-gray-700">찜 목록</span>
-            </a>
-            <a
-              href="/my/products"
-              className="p-4 border rounded-lg hover:bg-gray-50 text-center"
-            >
-              <span className="block text-2xl mb-1">🏷️</span>
-              <span className="text-gray-700">내 상품</span>
-            </a>
-          </div>
-        </div>
-
-        <button
-          onClick={handleLogout}
-          className="w-full py-3 border border-red-500 text-red-500 rounded-md hover:bg-red-50"
-        >
-          로그아웃
-        </button>
       </div>
     </Layout>
   );
