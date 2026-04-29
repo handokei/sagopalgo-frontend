@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { buildApiUrl } from '../lib/api';
+import { krw } from '../lib/format';
 
 interface Product {
   id: number;
@@ -36,88 +37,62 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [isLiked, setIsLiked] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('detail');
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const token = localStorage.getItem('accessToken');
         const headers: HeadersInit = {};
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
+        if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        const response = await fetch(buildApiUrl(`/api/products/${id}`), {
-          headers,
-        });
-
-        if (!response.ok) {
-          throw new Error('상품을 찾을 수 없습니다.');
-        }
-
+        const response = await fetch(buildApiUrl(`/api/products/${id}`), { headers });
+        if (!response.ok) throw new Error('상품을 찾을 수 없습니다.');
         const data = await response.json();
         setProduct(data);
 
-        // 이미지 조회
         const imagesResponse = await fetch(buildApiUrl(`/api/products/${id}/images`));
-        if (imagesResponse.ok) {
-          const imagesData = await imagesResponse.json();
-          setImages(imagesData);
-        }
+        if (imagesResponse.ok) setImages(await imagesResponse.json());
 
-        // 찜 여부 확인
-        if (token) {
-          checkLikeStatus(token);
-        }
-      } catch (err) {
+        if (token) checkLikeStatus(token);
+      } catch {
         setError('상품을 불러오는데 실패했습니다.');
       } finally {
         setLoading(false);
       }
     };
-
     fetchProduct();
   }, [id]);
 
   const checkLikeStatus = async (token: string) => {
     try {
       const response = await fetch(buildApiUrl(`/api/products/${id}/likes/check`), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-
       if (response.ok) {
         const data = await response.json();
         setIsLiked(data.liked);
       }
-    } catch (err) {
-      console.error('찜 상태 확인 실패:', err);
+    } catch {
+      // ignore
     }
   };
 
   const handleToggleLike = async () => {
     const token = localStorage.getItem('accessToken');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
+    if (!token) { navigate('/login'); return; }
     setLikeLoading(true);
-
     try {
       const response = await fetch(buildApiUrl(`/api/products/${id}/likes`), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-
       if (response.ok) {
         const data = await response.json();
         setIsLiked(data.liked);
       }
-    } catch (err) {
-      console.error('찜 토글 실패:', err);
+    } catch {
+      // ignore
     } finally {
       setLikeLoading(false);
     }
@@ -125,63 +100,38 @@ const ProductDetailPage = () => {
 
   const handleAddToCart = async () => {
     const token = localStorage.getItem('accessToken');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
+    if (!token) { navigate('/login'); return; }
     try {
       const response = await fetch(buildApiUrl('/api/carts/me/items'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          productId: product?.id,
-          quantity,
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ productId: product?.id, quantity }),
       });
-
-      if (!response.ok) {
-        throw new Error('장바구니 추가 실패');
-      }
-
+      if (!response.ok) throw new Error();
       alert('장바구니에 추가되었습니다.');
-    } catch (err) {
+    } catch {
       alert('장바구니 추가에 실패했습니다.');
     }
   };
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('ko-KR') + '원';
-  };
-
-  const formatDate = (dateString: string | number[]) => {
-    if (Array.isArray(dateString)) {
-      // LocalDateTime array format: [year, month, day, hour, minute, second]
-      const [year, month, day] = dateString;
-      return `${year}. ${month}. ${day}.`;
-    }
-    return new Date(dateString).toLocaleDateString('ko-KR');
-  };
+  const isOutOfStock = product?.stockStatus === 'OUT_OF_STOCK' || product?.productStatus !== 'ON_SALE';
+  const tabs = [
+    { key: 'detail', label: '상세 정보' },
+    { key: 'review', label: '리뷰' },
+    { key: 'qna', label: 'Q&A' },
+    { key: 'return', label: '반품/교환' },
+  ];
 
   if (loading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center py-20">
-          <span>로딩 중...</span>
-        </div>
-      </Layout>
-    );
+    return <Layout><div className="flex items-center justify-center py-20 text-ink-faint">로딩 중...</div></Layout>;
   }
 
   if (error || !product) {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center py-20">
-          <p className="text-red-500 mb-4">{error || '상품을 찾을 수 없습니다.'}</p>
-          <a href="/" className="text-blue-500 hover:underline">홈으로 돌아가기</a>
+          <p className="text-ink-soft mb-4">{error || '상품을 찾을 수 없습니다.'}</p>
+          <Link to="/" className="text-[13px] text-ink-soft hover:text-ink underline">홈으로 돌아가기</Link>
         </div>
       </Layout>
     );
@@ -189,133 +139,161 @@ const ProductDetailPage = () => {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="md:flex">
-            {/* 이미지 영역 */}
-            <div className="md:w-1/2">
+      <div className="max-w-content mx-auto px-8 py-8">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-[12px] text-ink-faint mb-6">
+          <Link to="/" className="hover:text-ink">홈</Link>
+          <span>›</span>
+          <Link to="/products" className="hover:text-ink">{product.categoryName}</Link>
+          <span>›</span>
+          <span className="text-ink">{product.title}</span>
+        </div>
+
+        {/* 메인: 이미지 + 상품 정보 */}
+        <div className="grid grid-cols-[1.2fr_1fr] gap-10 mb-12">
+          {/* 이미지 갤러리 */}
+          <div>
+            <div className="aspect-square bg-paper-warm border border-line overflow-hidden mb-2">
               {images.length > 0 ? (
-                <div>
-                  <div className="h-96 bg-gray-100">
-                    <img
-                      src={buildApiUrl(images[selectedImageIndex].imageUrl)}
-                      alt={product.title}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  {images.length > 1 && (
-                    <div className="flex gap-2 p-4 overflow-x-auto">
-                      {images.map((image, index) => (
-                        <button
-                          key={image.id}
-                          onClick={() => setSelectedImageIndex(index)}
-                          className={`w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 ${
-                            selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200'
-                          }`}
-                        >
-                          <img
-                            src={buildApiUrl(image.imageUrl)}
-                            alt={`${product.title} ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <img
+                  src={buildApiUrl(images[selectedImageIndex].imageUrl)}
+                  alt={product.title}
+                  className="w-full h-full object-contain"
+                />
               ) : (
-                <div className="h-96 bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-400 text-xl">상품 이미지</span>
+                <div className="img-ph w-full h-full flex items-center justify-center">
+                  <span className="text-[11px] font-mono text-ink-faint">상품 이미지</span>
                 </div>
               )}
             </div>
-
-            <div className="md:w-1/2 p-8">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-                    {product.categoryName}
-                  </span>
-                  <span className={`ml-2 px-3 py-1 rounded-full text-sm ${
-                    product.productStatus === 'ON_SALE'
-                      ? 'bg-green-100 text-green-600'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {product.productStatus === 'ON_SALE' ? '판매중' : '판매완료'}
-                  </span>
-                </div>
-                <button
-                  onClick={handleToggleLike}
-                  disabled={likeLoading}
-                  className={`text-2xl transition-colors ${
-                    isLiked ? 'text-red-500' : 'text-gray-300 hover:text-red-300'
-                  }`}
-                >
-                  {isLiked ? '♥' : '♡'}
-                </button>
-              </div>
-
-              <h1 className="text-2xl font-bold mb-4">{product.title}</h1>
-              <div className="flex items-center gap-3 mb-6">
-                <p className="text-3xl font-bold text-blue-600">{formatPrice(product.price)}</p>
-                {product.stockStatus === 'LOW_STOCK' && (
-                  <span className="px-2 py-1 bg-orange-100 text-orange-600 text-sm font-semibold rounded">
-                    품절 임박
-                  </span>
-                )}
-                {product.stockStatus === 'OUT_OF_STOCK' && (
-                  <span className="px-2 py-1 bg-red-100 text-red-600 text-sm font-semibold rounded">
-                    품절
-                  </span>
-                )}
-              </div>
-
-              <div className="border-t border-b py-4 mb-6 space-y-2 text-gray-600">
-                <p>판매자: {product.sellerNickname}</p>
-                <p>등록일: {formatDate(product.createdAt)}</p>
-              </div>
-
-              <div className="flex items-center gap-4 mb-6">
-                <label className="text-gray-700">수량:</label>
-                <div className="flex items-center border rounded-md">
+            {images.length > 1 && (
+              <div className="grid grid-cols-5 gap-2">
+                {images.map((image, index) => (
                   <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-3 py-2 hover:bg-gray-100"
+                    key={image.id}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`aspect-square border overflow-hidden ${
+                      selectedImageIndex === index ? 'border-ink border-2' : 'border-line hover:border-ink-soft'
+                    }`}
                   >
-                    -
+                    <img src={buildApiUrl(image.imageUrl)} alt="" className="w-full h-full object-cover" />
                   </button>
-                  <span className="px-4 py-2 border-x">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="px-3 py-2 hover:bg-gray-100"
-                  >
-                    +
-                  </button>
-                </div>
+                ))}
               </div>
+            )}
+          </div>
 
-              <div className="flex gap-4">
+          {/* 상품 정보 */}
+          <div>
+            <p className="text-[11px] font-mono tracking-[0.08em] uppercase text-ink-soft mb-2">
+              {product.sellerNickname}
+            </p>
+            <h1 className="text-[28px] font-bold tracking-tightish mb-3">{product.title}</h1>
+
+            {/* 가격 */}
+            <div className="flex items-baseline gap-3 mb-4">
+              <span className="text-[24px] font-bold text-ink">{krw(product.price)}</span>
+              {product.stockStatus === 'LOW_STOCK' && (
+                <span className="text-[12px] text-accent font-medium">품절 임박</span>
+              )}
+              {product.stockStatus === 'OUT_OF_STOCK' && (
+                <span className="text-[12px] text-ink-faint font-medium">품절</span>
+              )}
+            </div>
+
+            <div className="border-t border-line my-5" />
+
+            {/* 수량 */}
+            <div className="flex items-center gap-4 mb-6">
+              <span className="text-[13px] text-ink-soft w-12">수량</span>
+              <div className="inline-flex items-center border border-line rounded-sm">
                 <button
-                  onClick={handleAddToCart}
-                  disabled={product.productStatus !== 'ON_SALE' || product.stockStatus === 'OUT_OF_STOCK'}
-                  className="flex-1 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="w-8 h-8 flex items-center justify-center text-[13px] hover:bg-paper-warm"
                 >
-                  {product.stockStatus === 'OUT_OF_STOCK' ? '품절' : '장바구니 담기'}
+                  −
                 </button>
+                <span className="w-10 h-8 flex items-center justify-center text-[13px] font-medium border-x border-line">
+                  {quantity}
+                </span>
                 <button
-                  disabled={product.productStatus !== 'ON_SALE' || product.stockStatus === 'OUT_OF_STOCK'}
-                  className="flex-1 py-3 border border-blue-500 text-blue-500 rounded-md hover:bg-blue-50 disabled:border-gray-300 disabled:text-gray-300 disabled:cursor-not-allowed"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="w-8 h-8 flex items-center justify-center text-[13px] hover:bg-paper-warm"
                 >
-                  {product.stockStatus === 'OUT_OF_STOCK' ? '품절' : '바로 구매'}
+                  +
                 </button>
               </div>
             </div>
-          </div>
 
-          <div className="p-8 border-t">
-            <h2 className="text-xl font-bold mb-4">상품 설명</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{product.contents}</p>
+            {/* 액션 버튼 */}
+            <div className="flex gap-3 mb-6">
+              <button
+                onClick={handleToggleLike}
+                disabled={likeLoading}
+                className={`btn flex-1 ${isLiked ? 'text-accent border-accent' : ''}`}
+              >
+                {isLiked ? '♥ 찜' : '♡ 찜'}
+              </button>
+              <button
+                onClick={handleAddToCart}
+                disabled={isOutOfStock}
+                className="btn flex-[2] disabled:opacity-40"
+              >
+                {isOutOfStock ? '품절' : '장바구니'}
+              </button>
+              <button
+                disabled={isOutOfStock}
+                className="btn-primary flex-[2] disabled:opacity-40"
+              >
+                {isOutOfStock ? '품절' : '바로 구매'}
+              </button>
+            </div>
+
+            {/* 배송 정보 */}
+            <div className="bg-paper-muted border border-line p-4 text-[13px] text-ink-soft">
+              <p className="font-medium text-ink mb-2">배송 / 반품</p>
+              <ul className="space-y-1">
+                <li>· 무료배송</li>
+                <li>· 평균 1.8일 도착</li>
+                <li>· 30일 무료 반품</li>
+              </ul>
+            </div>
           </div>
+        </div>
+
+        {/* 탭 */}
+        <div className="flex border-b border-line mb-6">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`tab ${activeTab === t.key ? 'tab-active' : ''}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 탭 콘텐츠 */}
+        <div className="min-h-[320px] mb-12">
+          {activeTab === 'detail' && (
+            <div className="text-[14px] text-ink leading-relaxed whitespace-pre-wrap">
+              {product.contents}
+            </div>
+          )}
+          {activeTab === 'review' && (
+            <div className="text-center py-16 text-ink-faint">리뷰가 없습니다.</div>
+          )}
+          {activeTab === 'qna' && (
+            <div className="text-center py-16 text-ink-faint">Q&A가 없습니다.</div>
+          )}
+          {activeTab === 'return' && (
+            <div className="text-[14px] text-ink-soft leading-relaxed">
+              <p className="mb-2">· 상품 수령 후 30일 이내 무료 반품 가능</p>
+              <p className="mb-2">· 고객 변심 반품 시 왕복 배송비 부담</p>
+              <p>· 상품 하자 시 전액 환불</p>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
