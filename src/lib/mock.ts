@@ -1,0 +1,28 @@
+export interface TodaysPickHotspot {
+  id: number;
+  label: string;
+  price: string;
+  top: string;
+  left: string;
+}
+
+export interface TodaysPick {
+  date: string;
+  curator: string;
+  title: string;
+  subtitle: string;
+  hotspots: TodaysPickHotspot[];
+}
+
+export const mockTodaysPick: TodaysPick = {
+  date: new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
+  curator: '@stylist_mina',
+  title: '오늘의 한 벌',
+  subtitle: '봄 햇살 아래, 자연스럽게 힘을 빼는 무드. 오버사이즈 린넨 셔츠에 와이드 슬랙스, 캔버스 토트로 완성하는 이지 룩.',
+  hotspots: [
+    { id: 1, label: '오버사이즈 린넨 셔츠', price: '₩69,000', top: '14%', left: '38%' },
+    { id: 2, label: '와이드 코튼 슬랙스', price: '₩89,000', top: '40%', left: '52%' },
+    { id: 3, label: '캔버스 토트백', price: '₩45,000', top: '70%', left: '32%' },
+    { id: 4, label: '레더 샌들', price: '₩120,000', top: '24%', left: '64%' },
+  ],
+};

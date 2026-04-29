@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { buildApiUrl } from '../lib/api';
 
@@ -33,13 +34,14 @@ interface PageResponse {
 }
 
 const ProductListPage = () => {
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [keyword, setKeyword] = useState('');
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') ?? '');
   const [categoryId, setCategoryId] = useState<number | ''>('');
   const [categories, setCategories] = useState<Category[]>([]);
-  const [sort, setSort] = useState('');
+  const [sort, setSort] = useState(searchParams.get('sort') ?? '');
   const [loading, setLoading] = useState(false);
 
   const sortOptions = [
@@ -111,8 +113,15 @@ const ProductListPage = () => {
   };
 
   useEffect(() => {
+    const urlKeyword = searchParams.get('keyword') ?? '';
+    const urlSort = searchParams.get('sort') ?? '';
+    if (urlKeyword !== keyword) setKeyword(urlKeyword);
+    if (urlSort !== sort) setSort(urlSort);
+  }, [searchParams]);
+
+  useEffect(() => {
     fetchProducts();
-  }, [page, categoryId, sort]);
+  }, [page, categoryId, sort, keyword]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
