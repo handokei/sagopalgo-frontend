@@ -84,7 +84,7 @@ const Header = () => {
         <div className="max-w-content mx-auto px-8 flex items-center gap-6 h-10 text-[13px] font-medium">
           <Link to="/" className="text-ink hover:text-accent">홈</Link>
           <Link to="/products" className="text-ink-soft hover:text-ink">추천</Link>
-          <Link to="/products?sort=likes_count" className="text-ink-soft hover:text-ink">랭킹</Link>
+          <Link to="/ranking" className="text-ink-soft hover:text-ink">랭킹</Link>
           <Link to="/products?sort=latest" className="text-ink-soft hover:text-ink">신상품</Link>
           {isLoggedIn && (
             <Link to="/orders" className="text-ink-soft hover:text-ink">주문내역</Link>
