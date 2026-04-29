@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import * as PortOne from '@portone/browser-sdk/v2';
 import Layout from '../components/Layout';
 import { buildApiUrl } from '../lib/api';
 
@@ -87,6 +88,85 @@ const OrderDetailPage = () => {
     return colorMap[status] || 'bg-gray-100 text-gray-600';
   };
 
+  const handlePayment = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token || !order) {
+      navigate('/login');
+      return;
+    }
+
+    const storeId = import.meta.env.VITE_PORTONE_STORE_ID;
+    const channelKey = import.meta.env.VITE_PORTONE_CHANNEL_KEY;
+    if (!storeId || !channelKey) {
+      alert('결제 설정이 올바르지 않습니다. 관리자에게 문의해주세요.');
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      // 1. 결제 준비 (Payment 레코드 생성)
+      const prepareResponse = await fetch(buildApiUrl('/api/payments/prepare'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+
+      if (!prepareResponse.ok) {
+        throw new Error('결제 준비 실패');
+      }
+
+      const prepared = await prepareResponse.json();
+      const portOnePaymentId = `payment-${prepared.paymentId}-${crypto.randomUUID()}`;
+
+      // 2. PortOne 결제창 호출
+      const paymentResponse = await PortOne.requestPayment({
+        storeId,
+        channelKey,
+        paymentId: portOnePaymentId,
+        orderName: order.productTitle,
+        totalAmount: prepared.amount,
+        currency: 'CURRENCY_KRW',
+        payMethod: 'CARD',
+      } as Parameters<typeof PortOne.requestPayment>[0]);
+
+      if (paymentResponse?.code) {
+        if (paymentResponse.code === 'FAILURE_TYPE_PG') {
+          throw new Error('결제가 실패했습니다: ' + (paymentResponse.message || ''));
+        }
+        throw new Error('결제가 취소되었습니다.');
+      }
+
+      // 3. 결제 확인 (PortOne 검증)
+      const confirmResponse = await fetch(buildApiUrl('/api/payments/confirm'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentId: prepared.paymentId,
+          portOnePaymentId: portOnePaymentId,
+        }),
+      });
+
+      if (!confirmResponse.ok) {
+        throw new Error('결제 확인 실패');
+      }
+
+      setOrder(prev => prev ? { ...prev, orderStatus: 'PAID' } : null);
+      alert('결제가 완료되었습니다.');
+    } catch (error) {
+      console.error('결제 오류:', error);
+      alert(error instanceof Error ? error.message : '결제에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleAction = async (action: string) => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
@@ -112,7 +192,6 @@ const OrderDetailPage = () => {
       setOrder(prev => prev ? { ...prev, orderStatus: data.orderStatus } : null);
 
       const actionMessages: Record<string, string> = {
-        pay: '결제가 완료되었습니다.',
         cancel: '주문이 취소되었습니다.',
         ship: '배송이 시작되었습니다.',
         complete: '배송이 완료되었습니다.',
@@ -189,7 +268,7 @@ const OrderDetailPage = () => {
           {order.orderStatus === 'CREATED' && (
             <>
               <button
-                onClick={() => handleAction('pay')}
+                onClick={handlePayment}
                 disabled={actionLoading}
                 className="flex-1 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300"
               >
