@@ -21,7 +21,7 @@ const Header = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/products?keyword=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
