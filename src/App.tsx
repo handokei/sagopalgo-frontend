@@ -14,6 +14,7 @@ import ProductEditPage from './pages/ProductEditPage';
 import MyProductsPage from './pages/MyProductsPage';
 import LikesPage from './pages/LikesPage';
 import SearchPage from './pages/SearchPage';
+import RankingPage from './pages/RankingPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/products" element={<ProductListPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/ranking" element={<RankingPage />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />
         <Route path="/products/:id/edit" element={<ProductEditPage />} />
         <Route path="/products/create" element={<ProductCreatePage />} />
