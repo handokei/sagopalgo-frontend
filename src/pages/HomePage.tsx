@@ -115,10 +115,12 @@ const HomePage = () => {
           </div>
 
           {/* 오른쪽: 이미지 + 핫스팟 */}
-          <div className="relative img-ph rounded-sm" style={{ aspectRatio: '1 / 1.1' }}>
-            <span className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-ink-faint">
-              LOOKBOOK
-            </span>
+          <div className="relative rounded-sm overflow-hidden" style={{ aspectRatio: '1 / 1.1' }}>
+            <img
+              src={pick.heroImage}
+              alt={pick.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
             {pick.hotspots.map((hs) => (
               <div
                 key={hs.id}
@@ -147,8 +149,12 @@ const HomePage = () => {
             <div className="grid grid-cols-4 gap-5">
               {pick.hotspots.map((hs) => (
                 <div key={hs.id} className="block">
-                  <div className="img-ph aspect-[1/1.18] rounded-sm mb-2 flex items-center justify-center">
-                    <span className="text-[11px] font-mono text-ink-faint">#{hs.id}</span>
+                  <div className="aspect-[1/1.18] rounded-sm mb-2 overflow-hidden">
+                    <img
+                      src={hs.image}
+                      alt={hs.label}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <p className="text-[13px] text-ink leading-snug mb-1">{hs.label}</p>
                   <p className="text-[14px] font-bold text-ink">{hs.price}</p>
